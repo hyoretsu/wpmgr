@@ -72,6 +72,9 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 		}
 		return os.Chown(p, 33, 33)
 	}
+	if err := secret("operation.php", ""); err != nil {
+		return runtimeError("state_unavailable")
+	}
 	if err := secret("db_password", creds.DatabasePassword); err != nil {
 		return runtimeError("state_unavailable")
 	}
@@ -368,11 +371,28 @@ func (r *Runtime) runCLI(ctx context.Context, rec Record, file, script string) (
 	if err := r.checkCLI(ctx, name, rec.ID.String()); err != nil {
 		return nil, err
 	}
-	if strings.Contains(script, "define('WP_INSTALLING',true)") {
-		script = "<?php " + strings.ReplaceAll(script, "WP_CLI::halt(1)", "exit(1)")
-		return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli", "php", "/dev/stdin"}, []byte(script))
+	path := filepath.Join(filepath.Dir(file), "operation.php")
+	standalone := strings.Contains(script, "define('WP_INSTALLING',true)")
+	if !standalone {
+		script = strings.ReplaceAll(script, "require '/var/www/html/wp-load.php';", "")
 	}
-	return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "/dev/stdin"}, []byte(strings.ReplaceAll(script, "require '/var/www/html/wp-load.php';", "")))
+	if standalone {
+		script = strings.ReplaceAll(script, "WP_CLI::halt(1)", "exit(1)")
+	}
+	if err := os.WriteFile(path, []byte("<?php "+script), 0600); err != nil {
+		return nil, runtimeError("state_unavailable")
+	}
+	if err := os.Chown(path, 33, 33); err != nil {
+		return nil, runtimeError("state_unavailable")
+	}
+	args := []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli"}
+	if standalone {
+		args = append(args, "php", "/run/secrets/operation")
+	} else {
+		args = append(args, "wp", "eval-file", "/run/secrets/operation")
+	}
+	return r.Command.Run(ctx, args, nil)
+
 }
 func (r *Runtime) checkCLI(ctx context.Context, name, id string) error {
 	out, err := r.Command.Run(ctx, []string{"docker", "container", "inspect", name}, nil)

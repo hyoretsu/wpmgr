@@ -13,6 +13,7 @@ func composeDocument(r Record, dir string) ([]byte, error) {
 	name := resourceName(r)
 	env := map[string]string{"WORDPRESS_DB_HOST": r.Config.MariaDBAddress, "WORDPRESS_DB_NAME": databaseName(r), "WORDPRESS_DB_USER": databaseName(r), "WORDPRESS_DB_PASSWORD_FILE": "/run/secrets/db_password"}
 	secrets := map[string]any{"db_password": map[string]string{"file": filepath.Join(dir, "db_password")}}
+	secrets["operation"] = map[string]string{"file": filepath.Join(dir, "operation.php")}
 	names := []string{"db_password"}
 	for _, key := range []string{"AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY", "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT"} {
 		n := strings.ToLower(key)
@@ -46,7 +47,7 @@ func composeDocument(r Record, dir string) ([]byte, error) {
 	}
 	cli["environment"] = cliEnv
 	cli["profiles"] = []string{"cli"}
-	cli["secrets"] = names
+	cli["secrets"] = append(append([]string{}, names...), "operation")
 	raw, err := json.Marshal(map[string]any{"name": name, "services": map[string]any{"wordpress": wp, "cli": cli}, "volumes": map[string]any{volume: map[string]any{"external": true}}, "networks": map[string]any{"proxy": map[string]any{"external": true, "name": r.Config.ProxyNetwork}}, "secrets": secrets})
 	if err != nil {
 		return nil, err
