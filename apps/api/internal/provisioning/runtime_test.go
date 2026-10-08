@@ -152,3 +152,16 @@ func TestHTTPSRejectsDifferentInstallation(t *testing.T) {
 		t.Fatalf("identity PHP invalid: %s", out)
 	}
 }
+
+func TestVolumeCreationRaceRechecksOwnership(t *testing.T) {
+	f := &fakeCommands{output: [][]byte{nil, []byte(""), []byte("fixture"), []byte(`[{"Labels":{"app.wpmgr.provisioning-id":"foreign"}}]`)}, failures: []error{errors.New("missing"), nil, nil, nil}}
+	if err := (&Runtime{Command: f}).ensureResource(context.Background(), "volume", "fixture", "mine"); err == nil || err.Error() != "volume_collision" {
+		t.Fatalf("foreign volume adopted: %v", err)
+	}
+}
+func TestRunningCLIBlocksRetry(t *testing.T) {
+	f := &fakeCommands{output: [][]byte{[]byte(`[{"Config":{"Labels":{"app.wpmgr.provisioning-id":"mine"}},"State":{"Running":true,"Status":"running"}}]`)}, failures: []error{nil}}
+	if err := (&Runtime{Command: f}).checkCLI(context.Background(), "fixture_cli", "mine"); err == nil || err.Error() != "cli_busy" || len(f.calls) != 1 {
+		t.Fatalf("running CLI overlapped: %v", err)
+	}
+}

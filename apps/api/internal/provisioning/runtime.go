@@ -273,26 +273,22 @@ func (r *Runtime) database(ctx context.Context, rec Record, creds Credentials) e
 	}
 	if exists != 0 {
 		var owner string
-		if conn.QueryRowContext(ctx, "SELECT owner FROM `"+name+"`.`wpmgr_resource_owner` LIMIT 1").Scan(&owner) != nil || owner != rec.ID.String() {
+		if conn.QueryRowContext(ctx, "SELECT SCHEMA_COMMENT FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=?", name).Scan(&owner) != nil || owner != rec.ID.String() {
 			return runtimeError("database_collision")
 		}
 		return r.databaseUser(ctx, conn, c, name, creds.DatabasePassword, true)
 	}
+
 	if err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM mysql.user WHERE User=?", name).Scan(&exists); err != nil {
 		return runtimeError("database_privileges_missing")
 	}
 	if exists != 0 {
 		return runtimeError("database_user_collision")
 	}
-	if _, err = conn.ExecContext(ctx, "CREATE DATABASE `"+name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"); err != nil {
+	if _, err = conn.ExecContext(ctx, "CREATE DATABASE `"+name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '"+rec.ID.String()+"'"); err != nil {
 		return runtimeError("database_create_failed")
 	}
-	if _, err = conn.ExecContext(ctx, "CREATE TABLE `"+name+"`.`wpmgr_resource_owner` (owner VARCHAR(36) PRIMARY KEY)"); err != nil {
-		return runtimeError("database_create_failed")
-	}
-	if _, err = conn.ExecContext(ctx, "INSERT INTO `"+name+"`.`wpmgr_resource_owner` (owner) VALUES (?)", rec.ID.String()); err != nil {
-		return runtimeError("database_create_failed")
-	}
+
 	return r.databaseUser(ctx, conn, c, name, creds.DatabasePassword, false)
 }
 func (r *Runtime) databaseUser(ctx context.Context, conn *sql.Conn, c *mysql.Config, name, password string, resume bool) error {
