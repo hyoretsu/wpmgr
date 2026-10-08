@@ -17,7 +17,7 @@ domain=${id,,}.invalid
 cleanup() {
   for name in "$id-proxy" "$id-backend" "$id-ca" "$id-extract"; do
     docker logs "$name" >"$fixture/$name.log" 2>&1 || true
-    docker rm -f "$name" >/dev/null 2>&1 || true
+    docker rm -f -v "$name" >/dev/null 2>&1 || true
   done
   docker network rm "$network" >/dev/null 2>&1 || true
   echo "ACME evidence: $fixture"
@@ -63,20 +63,21 @@ for attempt in $(seq 1 40); do
   sleep 1
 done
 [[ "$failed" == true ]] || { echo 'FAIL: missing DNS never rejected validation' >&2; exit 1; }
+rg -q '"challenge_type":"http-01"' "$fixture/missing-dns.log"
 echo 'missing DNS ACME validation: rejected'
-docker rm -f "$id-ca" >/dev/null
+docker rm -f -v "$id-ca" >/dev/null
 docker run -d --pull never --name "$id-ca" --network "$network" --network-alias pebble \
   --add-host "$domain:$proxy_ip" -e PEBBLE_VA_NOSLEEP=1 \
   -v "$fixture/test:/test:ro" "$pebble_image" >/dev/null
 # Export the issuance root (distinct from the ACME directory TLS root).
 ca_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$id-ca")
 for attempt in $(seq 1 20); do
-  if curl --noproxy '*' --fail --silent --max-time 2 --insecure "https://$ca_ip:15000/roots/0" > "$fixture/issuance-root.pem"; then break; fi
+  if curl --noproxy '*' --fail --silent --max-time 2 --resolve "localhost:15000:$ca_ip" --cacert "$fixture/test/certs/pebble.minica.pem" "https://localhost:15000/roots/0" > "$fixture/issuance-root.pem"; then break; fi
   sleep 1
 done
 [[ -s "$fixture/issuance-root.pem" ]] || { echo 'FAIL: issuance root unavailable' >&2; exit 1; }
 # Restart proxy after expected rejection.
-docker rm -f "$id-proxy" >/dev/null
+docker rm -f -v "$id-proxy" >/dev/null
 docker run -d --pull never --name "$id-proxy" --network "$network" --ip "$proxy_ip" \
   -v /var/run/docker.sock:/var/run/docker.sock:ro -v "$fixture:/fixture:ro" \
   "$proxy_image" caddy docker-proxy --label-prefix "$prefix" \
@@ -90,5 +91,8 @@ for attempt in $(seq 1 90); do
 done
 [[ "$issued" == true ]] || { cat "$fixture/https-error" >&2; echo 'FAIL: trusted HTTPS unavailable' >&2; exit 1; }
 rg -q 'isolated provisioning backend' "$fixture/https-body"
-[[ $(docker inspect --format '{{json .HostConfig.PortBindings}}' "$id-backend") == '{}' || $(docker inspect --format '{{json .HostConfig.PortBindings}}' "$id-backend") == null ]]
+for name in "$id-backend" "$id-proxy" "$id-ca"; do
+  bindings=$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$name")
+  [[ "$bindings" == '{}' || "$bindings" == null ]] || { echo "FAIL: host ports published by $name" >&2; exit 1; }
+done
 echo 'ACME local integration: PASS (issued trusted HTTPS; unpublished backend)'
