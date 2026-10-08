@@ -281,6 +281,10 @@ type CreatePairingCodeRes interface {
 	createPairingCodeRes()
 }
 
+type CreateProvisioningRes interface {
+	createProvisioningRes()
+}
+
 type CreateRestoreRes interface {
 	createRestoreRes()
 }
@@ -625,6 +629,10 @@ type GetPortalSummaryRes interface {
 	getPortalSummaryRes()
 }
 
+type GetProvisioningConfigRes interface {
+	getProvisioningConfigRes()
+}
+
 type GetPublicPricingRes interface {
 	getPublicPricingRes()
 }
@@ -707,6 +715,14 @@ type GetSiteFilesSettingsRes interface {
 
 type GetSiteHardeningConfigRes interface {
 	getSiteHardeningConfigRes()
+}
+
+type GetSiteProvisioningCredentialsRes interface {
+	getSiteProvisioningCredentialsRes()
+}
+
+type GetSiteProvisioningRes interface {
+	getSiteProvisioningRes()
 }
 
 type GetSiteRes interface {
@@ -1203,6 +1219,10 @@ type ResumeSiteMonitoringRes interface {
 
 type ResumeTenantAssistantRes interface {
 	resumeTenantAssistantRes()
+}
+
+type RetrySiteProvisioningRes interface {
+	retrySiteProvisioningRes()
 }
 
 type RetryUpdateRunRes interface {

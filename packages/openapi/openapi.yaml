@@ -126,6 +126,108 @@ tags:
       WPMgr agent release version and each site's update freshness. Distinct
       from the agent tag, which covers agent-to-control-plane endpoints.
 paths:
+  /api/v1/provisioning/config:
+    get:
+      operationId: getProvisioningConfig
+      tags: [sites]
+      summary: getProvisioningConfig
+      responses:
+        "200":
+          description: Provisioning response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningConfig"
+        default:
+          description: Request refused or provisioning unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/provisioning:
+    post:
+      operationId: createProvisioning
+      tags: [sites]
+      summary: createProvisioning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProvisioning"
+      responses:
+        "202":
+          description: Provisioning response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningRecord"
+        default:
+          description: Request refused or provisioning unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/sites/{siteId}/provisioning:
+    get:
+      operationId: getSiteProvisioning
+      tags: [sites]
+      summary: getSiteProvisioning
+      parameters:
+        - $ref: "#/components/parameters/SiteId"
+      responses:
+        "200":
+          description: Provisioning response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningRecord"
+        default:
+          description: Request refused or provisioning unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/sites/{siteId}/provisioning/retry:
+    post:
+      operationId: retrySiteProvisioning
+      tags: [sites]
+      summary: retrySiteProvisioning
+      parameters:
+        - $ref: "#/components/parameters/SiteId"
+      responses:
+        "202":
+          description: Provisioning response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningRecord"
+        default:
+          description: Request refused or provisioning unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/sites/{siteId}/provisioning/credentials:
+    get:
+      operationId: getSiteProvisioningCredentials
+      tags: [sites]
+      summary: getSiteProvisioningCredentials
+      parameters:
+        - $ref: "#/components/parameters/SiteId"
+      responses:
+        "200":
+          description: Provisioning response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningCredentials"
+        default:
+          description: Request refused or provisioning unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /healthz:
     get:
       operationId: getHealthz
@@ -14694,6 +14796,66 @@ components:
         rejects stale timestamps and replayed nonces. (apiKey type is the closest
         OpenAPI 3.1 primitive for this header-carried signature scheme.)
   schemas:
+    ProvisioningConfig:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+    CreateProvisioning:
+      type: object
+      required: [domain, admin_username, admin_email]
+      properties:
+        domain:
+          type: string
+        title:
+          type: string
+        admin_username:
+          type: string
+        admin_email:
+          type: string
+    ProvisioningRecord:
+      type: object
+      required: [id, site_id, domain, title, admin_username, admin_email, status, step, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        site_id:
+          type: string
+          format: uuid
+        domain:
+          type: string
+        title:
+          type: string
+        admin_username:
+          type: string
+        admin_email:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, failed, complete]
+        step:
+          type: string
+          enum: [queued, database, volume, wordpress, install, agent, https, complete]
+        error_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProvisioningCredentials:
+      type: object
+      required: [admin_username, admin_password, login_url]
+      properties:
+        admin_username:
+          type: string
+        admin_password:
+          type: string
+        login_url:
+          type: string
     Health:
       type: object
       required: [status]

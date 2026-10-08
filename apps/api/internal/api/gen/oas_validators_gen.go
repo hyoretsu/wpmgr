@@ -12775,6 +12775,78 @@ func (s PrincipalRole) Validate() error {
 	}
 }
 
+func (s *ProvisioningRecord) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Status.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "status",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Step.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "step",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ProvisioningRecordStatus) Validate() error {
+	switch s {
+	case "queued":
+		return nil
+	case "running":
+		return nil
+	case "failed":
+		return nil
+	case "complete":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ProvisioningRecordStep) Validate() error {
+	switch s {
+	case "queued":
+		return nil
+	case "database":
+		return nil
+	case "volume":
+		return nil
+	case "wordpress":
+		return nil
+	case "install":
+		return nil
+	case "agent":
+		return nil
+	case "https":
+		return nil
+	case "complete":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *PublicPricing) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
