@@ -20,8 +20,9 @@ func composeDocument(r Record, dir string) ([]byte, error) {
 		secrets[n] = map[string]string{"file": filepath.Join(dir, n)}
 		names = append(names, n)
 	}
+	env["WORDPRESS_CONFIG_EXTRA"] = "if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') { $_SERVER['HTTPS'] = 'on'; }"
 	if r.Config.MariaDBTLS {
-		env["WORDPRESS_CONFIG_EXTRA"] = "define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL);"
+		env["WORDPRESS_CONFIG_EXTRA"] += "define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL);"
 	}
 	volume := name + "_wordpress"
 	shared := map[string]any{"volumes": []string{volume + ":/var/www/html"}, "networks": []string{"proxy"}, "extra_hosts": []string{"host.docker.internal:host-gateway"}, "labels": map[string]string{ownerLabel: r.ID.String()}, "pull_policy": "never"}

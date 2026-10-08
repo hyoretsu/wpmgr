@@ -128,6 +128,7 @@ func TestRuntimeDatabaseInstallRestartAndRetry(t *testing.T) {
 		proxy := httputil.NewSingleHostReverseProxy(target)
 		proxy.ModifyResponse = func(resp *http.Response) error {
 			t.Logf("fixture HTTPS response status=%d marker=%t", resp.StatusCode, resp.Header.Get("X-WPMgr-Provisioning-ID") != "")
+			t.Logf("fixture location=%s", resp.Header.Get("Location"))
 			return nil
 		}
 		proxy.ServeHTTP(w, r)
