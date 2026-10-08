@@ -20,6 +20,19 @@ class BoundaryTests(unittest.TestCase):
     def test_valid(self):
         boundary.check(self.config)
 
+    def test_api_nonsecret_snapshot(self):
+        self.config["services"]["api"]["environment"].update({
+            "WPMGR_PROVISIONING_MARIADB_ADDRESS": "host.docker.internal:3306",
+            "WPMGR_PROVISIONING_WORDPRESS_IMAGE": "wordpress:6.8.2-php8.3-apache",
+            "WPMGR_PROVISIONING_PROXY_NETWORK": "proxy",
+        })
+        boundary.check(self.config)
+
+    def test_username_leak(self):
+        self.config["services"]["api"]["environment"]["WPMGR_PROVISIONING_MARIADB_USERNAME"] = "provisioner"
+        with self.assertRaises(ValueError):
+            boundary.check(self.config)
+
     def test_socket_leak(self):
         self.config["services"]["api"]["volumes"] = copy.deepcopy(self.config["services"]["provisioning-worker"]["volumes"])
         with self.assertRaises(ValueError):
