@@ -5,9 +5,9 @@ Approved scope: self-hosted, explicitly enabled provisioning restricted to confi
 ## Execution
 
 - [x] Add additive provisioning persistence and isolation policies through database specialist.
-- [ ] Implement authenticated create/status/retry/credential interfaces, durable worker and enrollment adapter through backend specialist.
-- [ ] Regenerate OpenAPI consumers using repository tooling.
-- [ ] Add dashboard form, progress, actionable errors and retry through frontend specialist.
+- [x] Implement authenticated create/status/retry/credential interfaces, durable worker and enrollment adapter through backend specialist; final verification pending.
+- [x] Regenerate OpenAPI consumers using repository tooling.
+- [x] Add dashboard form, progress, failure guidance, credential retrieval and retry through frontend specialist; final verification pending.
 - [x] Add opt-in worker infrastructure and fail-loud local verification preflight through devops specialist. Full Docker/ACME execution awaits pinned images.
 - [ ] Security review committed implementation for privileges, credentials, tenancy, concurrency and enrollment; address findings.
 - [ ] Run available local tests and integration verification; report blocked prerequisites explicitly.
