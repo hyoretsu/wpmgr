@@ -415,19 +415,20 @@ func (r *Runtime) checkCLI(ctx context.Context, name, id string) error {
 		return runtimeError("cli_collision")
 	}
 	var items []struct {
+		ID    string `json:"Id"`
 		State struct {
 			Running bool
 			Status  string
 		}
 	}
-	if json.Unmarshal(out, &items) != nil || len(items) != 1 {
+	if json.Unmarshal(out, &items) != nil || len(items) != 1 || items[0].ID == "" {
 		return runtimeError("cli_collision")
 	}
 	if items[0].State.Running || items[0].State.Status == "created" || items[0].State.Status == "restarting" {
 		return runtimeError("cli_busy")
 	}
 	// Only a stopped, owned helper may be removed; site volumes stay intact.
-	if _, err = r.Command.Run(ctx, []string{"docker", "container", "rm", name}, nil); err != nil {
+	if _, err = r.Command.Run(ctx, []string{"docker", "container", "rm", items[0].ID}, nil); err != nil {
 		return runtimeError("cli_busy")
 	}
 	return nil

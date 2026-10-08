@@ -160,8 +160,36 @@ func TestVolumeCreationRaceRechecksOwnership(t *testing.T) {
 	}
 }
 func TestRunningCLIBlocksRetry(t *testing.T) {
-	f := &fakeCommands{output: [][]byte{[]byte(`[{"Config":{"Labels":{"app.wpmgr.provisioning-id":"mine"}},"State":{"Running":true,"Status":"running"}}]`)}, failures: []error{nil}}
+	f := &fakeCommands{output: [][]byte{[]byte(`[{"Id":"a7fb760e8347bdb07038f8c92dcf8db65f10b7fb56ce153901ecf36314229d94","Config":{"Labels":{"app.wpmgr.provisioning-id":"mine"}},"State":{"Running":true,"Status":"running"}}]`)}, failures: []error{nil}}
 	if err := (&Runtime{Command: f}).checkCLI(context.Background(), "fixture_cli", "mine"); err == nil || err.Error() != "cli_busy" || len(f.calls) != 1 {
 		t.Fatalf("running CLI overlapped: %v", err)
+	}
+}
+
+func TestStoppedCLIRemovalBindsInspectedContainerID(t *testing.T) {
+	const containerID = "a7fb760e8347bdb07038f8c92dcf8db65f10b7fb56ce153901ecf36314229d94"
+	f := &fakeCommands{
+		output:   [][]byte{[]byte(`[{"Id":"` + containerID + `","Config":{"Labels":{"app.wpmgr.provisioning-id":"mine"}},"State":{"Running":false,"Status":"exited"}}]`), nil},
+		failures: []error{nil, nil},
+	}
+	if err := (&Runtime{Command: f}).checkCLI(context.Background(), "fixture_cli", "mine"); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.calls) != 2 || strings.Join(f.calls[1], " ") != "docker container rm "+containerID {
+		t.Fatalf("removal must target inspected container identity: %v", f.calls)
+	}
+}
+
+func TestStoppedCLIWithoutContainerIDBlocksRemoval(t *testing.T) {
+	for _, idField := range []string{"", `"Id":"",`} {
+		t.Run(idField, func(t *testing.T) {
+			f := &fakeCommands{
+				output:   [][]byte{[]byte(`[{` + idField + `"Config":{"Labels":{"app.wpmgr.provisioning-id":"mine"}},"State":{"Running":false,"Status":"exited"}}]`), nil},
+				failures: []error{nil, nil},
+			}
+			if err := (&Runtime{Command: f}).checkCLI(context.Background(), "fixture_cli", "mine"); err == nil || err.Error() != "cli_collision" || len(f.calls) != 1 {
+				t.Fatalf("helper without immutable identity was removed: %v %v", err, f.calls)
+			}
+		})
 	}
 }
