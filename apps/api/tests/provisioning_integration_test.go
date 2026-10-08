@@ -38,6 +38,7 @@ func TestProvisioningAtomicTenantIsolationAndRetry(t *testing.T) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var successes []provisioning.Record
+	var failures []error
 	for range 2 {
 		wg.Add(1)
 		go func() {
@@ -47,12 +48,16 @@ func TestProvisioningAtomicTenantIsolationAndRetry(t *testing.T) {
 				mu.Lock()
 				successes = append(successes, r)
 				mu.Unlock()
+			} else {
+				mu.Lock()
+				failures = append(failures, e)
+				mu.Unlock()
 			}
 		}()
 	}
 	wg.Wait()
 	if len(successes) != 1 {
-		t.Fatalf("expected exactly one successful concurrent request, got %d", len(successes))
+		t.Fatalf("expected exactly one successful concurrent request, got %d; request errors: %v", len(successes), failures)
 	}
 	record := successes[0]
 	if _, _, e = repo.Get(ctx, tenantB, record.SiteID); e == nil {
