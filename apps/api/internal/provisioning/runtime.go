@@ -3,6 +3,7 @@ package provisioning
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -308,11 +309,13 @@ func (r *Runtime) databaseUser(ctx context.Context, conn *sql.Conn, c *mysql.Con
 			return runtimeError("database_user_collision")
 		}
 	}
-	// Hex literals keep generated passwords out of SQL quoting and process arguments.
+	// Native password hashes avoid SQL quoting of plaintext passwords.
 	user := "'" + name + "'@'%'"
-	pw := fmt.Sprintf("0x%x", []byte(password))
+	digest := sha1.Sum([]byte(password))
+	double := sha1.Sum(digest[:])
+	pw := fmt.Sprintf("'*%X'", double)
 	if exists == 0 {
-		if _, err := conn.ExecContext(ctx, "CREATE USER "+user+" IDENTIFIED BY "+pw); err != nil {
+		if _, err := conn.ExecContext(ctx, "CREATE USER "+user+" IDENTIFIED BY PASSWORD "+pw); err != nil {
 			return runtimeError("database_user_create_failed")
 		}
 	}

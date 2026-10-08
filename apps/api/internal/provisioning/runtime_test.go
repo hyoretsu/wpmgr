@@ -1,0 +1,97 @@
+package provisioning
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"os/exec"
+	"strings"
+	"testing"
+
+	"github.com/google/uuid"
+)
+
+type fakeCommands struct {
+	calls    [][]string
+	output   [][]byte
+	failures []error
+}
+
+func (f *fakeCommands) Run(_ context.Context, args []string, _ []byte) ([]byte, error) {
+	i := len(f.calls)
+	f.calls = append(f.calls, args)
+	return f.output[i], f.failures[i]
+}
+func TestResourceCollisionNeverCreates(t *testing.T) {
+	f := &fakeCommands{output: [][]byte{[]byte(`[{"Labels":{"app.wpmgr.provisioning-id":"other"}}]`)}, failures: []error{nil}}
+	r := &Runtime{Command: f}
+	err := r.ensureResource(context.Background(), "volume", "fixture", "mine")
+	if err == nil || err.Error() != "volume_collision" || len(f.calls) != 1 {
+		t.Fatalf("collision adopted: %v %v", err, f.calls)
+	}
+}
+func TestDockerFailureIsNotResourceAbsence(t *testing.T) {
+	f := &fakeCommands{output: [][]byte{nil, nil}, failures: []error{errors.New("inspect failed"), errors.New("daemon unavailable")}}
+	r := &Runtime{Command: f}
+	err := r.ensureResource(context.Background(), "volume", "fixture", "mine")
+	if err == nil || err.Error() != "docker_unavailable" || len(f.calls) != 2 {
+		t.Fatalf("failed inspect adopted: %v %v", err, f.calls)
+	}
+}
+func TestOwnedVolumeResumesWithoutCreate(t *testing.T) {
+	f := &fakeCommands{output: [][]byte{[]byte(`[{"Labels":{"app.wpmgr.provisioning-id":"mine"}}]`)}, failures: []error{nil}}
+	if err := (&Runtime{Command: f}).ensureResource(context.Background(), "volume", "fixture", "mine"); err != nil || len(f.calls) != 1 {
+		t.Fatalf("resume failed: %v", err)
+	}
+}
+func TestComposeSharesConfigAndPublishesNoPorts(t *testing.T) {
+	rec := Record{ID: uuid.New(), SiteID: uuid.New(), Domain: "fixture.example", Config: RuntimeConfig{MariaDBAddress: "host.docker.internal:3306", ProxyNetwork: "proxy", WordPressImage: "wordpress:6.8.2-php8.3-apache", WPCLIImage: "wordpress:cli-2.12.0-php8.3", MariaDBTLS: true}}
+	b, err := composeDocument(rec, "/secure/state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Services map[string]struct {
+			Environment map[string]string
+			Ports       []string
+			ExtraHosts  []string `json:"extra_hosts"`
+			Secrets     []string
+		}
+	}
+	if json.Unmarshal(b, &doc) != nil {
+		t.Fatal("invalid compose")
+	}
+	wp, cli := doc.Services["wordpress"], doc.Services["cli"]
+	for key, value := range wp.Environment {
+		if cli.Environment[key] != value {
+			t.Fatalf("CLI missing %s", key)
+		}
+	}
+	if len(wp.Ports) != 0 || len(cli.Ports) != 0 || len(wp.ExtraHosts) == 0 || len(cli.Secrets) == 0 {
+		t.Fatal("unsafe compose geometry")
+	}
+	if !strings.Contains(wp.Environment["WORDPRESS_CONFIG_EXTRA"], "MYSQLI_CLIENT_SSL") {
+		t.Fatal("TLS absent")
+	}
+}
+func TestInstallPHPParsesAndRetainsInstalledCredentials(t *testing.T) {
+	if _, err := exec.LookPath("php"); err != nil {
+		t.Fatal("PHP syntax verification binary unavailable")
+	}
+	script := installScript(Record{Domain: "fixture.example", Title: "Quote ' title", AdminUsername: "admin", AdminEmail: "admin@example.com"}, Credentials{AdminPassword: "secret ' \\"})
+	cmd := exec.Command("php", "-l")
+	cmd.Stdin = strings.NewReader("<?php " + script)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("invalid install PHP: %s", out)
+	}
+	if strings.Contains(script, "update_option") || !strings.Contains(script, "if(!is_blog_installed())") {
+		t.Fatal("initialized site changed")
+	}
+}
+func TestRuntimeErrorsExposeSafeCodes(t *testing.T) {
+	err := runtimeError("https_unavailable")
+	var coded interface{ Code() string }
+	if !errors.As(err, &coded) || coded.Code() != "https_unavailable" {
+		t.Fatal("failure lost actionable code")
+	}
+}
