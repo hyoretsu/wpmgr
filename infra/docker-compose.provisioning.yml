@@ -1,0 +1,49 @@
+# Opt-in same-host provisioning. Combine with docker-compose.yml and supply
+# --env-file /path/to/operator.env (nonsecret host paths and API enable/tenant).
+# Worker credentials belong exclusively in WPMGR_PROVISIONING_WORKER_ENV_FILE,
+# never ../.env, which is also loaded by api and media-encoder.
+services:
+  api:
+    environment:
+      WPMGR_PROVISIONING_ENABLED: ${WPMGR_PROVISIONING_ENABLED:-false}
+      WPMGR_PROVISIONING_OPERATOR_TENANT_ID: ${WPMGR_PROVISIONING_OPERATOR_TENANT_ID:-}
+
+  provisioning-worker:
+    profiles: [provisioning]
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.provisioning-worker
+    image: wpmgr-provisioning-worker:dev
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    env_file:
+      - path: ${WPMGR_PROVISIONING_WORKER_ENV_FILE:-../.env.provisioning-worker}
+        required: true
+    environment:
+      WPMGR_PROVISIONING_ENABLED: ${WPMGR_PROVISIONING_ENABLED:-false}
+      WPMGR_PROVISIONING_OPERATOR_TENANT_ID: ${WPMGR_PROVISIONING_OPERATOR_TENANT_ID:-}
+      WPMGR_PROVISIONING_STATE_DIR: ${WPMGR_PROVISIONING_STATE_DIR:-/var/lib/wpmgr/provisioning}
+      WPMGR_DB_HOST: postgres
+      WPMGR_DB_PORT: "5432"
+      WPMGR_DB_USER: wpmgr_app
+      WPMGR_DB_NAME: ${WPMGR_DB_NAME:-wpmgr}
+      WPMGR_DB_SSLMODE: ${WPMGR_DB_SSLMODE:-disable}
+      WPMGR_ALLOW_RLS_BYPASS_ROLE: "false"
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind:
+          create_host_path: false
+      # Identical host/container path: Compose runs through the host daemon.
+      - type: bind
+        source: ${WPMGR_PROVISIONING_STATE_DIR:-/var/lib/wpmgr/provisioning}
+        target: ${WPMGR_PROVISIONING_STATE_DIR:-/var/lib/wpmgr/provisioning}
+        bind:
+          create_host_path: false
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      postgres:
+        condition: service_healthy
