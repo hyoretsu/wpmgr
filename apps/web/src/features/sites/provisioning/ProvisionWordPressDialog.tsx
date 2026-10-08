@@ -23,7 +23,7 @@ export function ProvisionWordPressDialog() {
     <Dialog open={open} onClose={() => setOpen(false)}>
       {open ? <DialogContent ariaLabelledBy="provision-title">
         <DialogHeader><DialogTitle id="provision-title">Provision WordPress</DialogTitle></DialogHeader>
-        {siteId ? <><DialogBody><ProvisioningStatus tenantId={tenantId} siteId={siteId} showCredentials /></DialogBody><DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Close</Button></DialogFooter></> : <ProvisioningForm pending={create.isPending} error={create.isError ? create.error.message : undefined} onClose={() => setOpen(false)} onSubmit={values => create.mutate({ ...values, title: values.title || undefined }, { onSuccess: record => setSiteId(record.site_id) })} />}
+        {siteId ? <><DialogBody><ProvisioningStatus tenantId={tenantId} siteId={siteId} showCredentials /></DialogBody><DialogFooter><Button variant="outline" className="cursor-pointer" onClick={() => setOpen(false)}>Close</Button></DialogFooter></> : <ProvisioningForm pending={create.isPending} error={create.isError ? create.error.message : undefined} onClose={() => setOpen(false)} onSubmit={values => create.mutate({ ...values, title: values.title || undefined }, { onSuccess: record => setSiteId(record.site_id) })} />}
       </DialogContent> : null}
     </Dialog>
   </>;

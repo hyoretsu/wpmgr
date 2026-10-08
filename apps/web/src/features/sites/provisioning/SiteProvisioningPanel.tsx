@@ -19,7 +19,7 @@ export function SiteProvisioningPanel({ tenantId, siteId }: { tenantId: string; 
     <Dialog open={open} onClose={() => setOpen(false)}>{open ? <DialogContent ariaLabelledBy={`provision-status-${siteId}`}>
       <DialogHeader><DialogTitle id={`provision-status-${siteId}`}>WordPress provisioning</DialogTitle></DialogHeader>
       <DialogBody><ProvisioningStatus tenantId={tenantId} siteId={siteId} showCredentials /></DialogBody>
-      <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Close</Button></DialogFooter>
+      <DialogFooter><Button variant="outline" className="cursor-pointer" onClick={() => setOpen(false)}>Close</Button></DialogFooter>
     </DialogContent> : null}</Dialog>
   </div>;
 }

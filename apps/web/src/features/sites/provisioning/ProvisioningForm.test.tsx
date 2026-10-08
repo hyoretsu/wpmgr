@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { renderWithProviders } from "@/test/render";
 import { ProvisioningForm } from "./ProvisioningForm";
 
 function renderForm(onSubmit = vi.fn(), pending = false) {
-  renderWithProviders(<Dialog open onClose={vi.fn()}><DialogContent ariaLabelledBy="form-title"><h2 id="form-title">New WordPress site</h2><ProvisioningForm onSubmit={onSubmit} onClose={vi.fn()} pending={pending} /></DialogContent></Dialog>);
+  renderWithProviders(<Dialog open onClose={vi.fn()}><DialogContent ariaLabelledBy="form-title"><DialogTitle id="form-title">New WordPress site</DialogTitle><ProvisioningForm onSubmit={onSubmit} onClose={vi.fn()} pending={pending} /></DialogContent></Dialog>);
   return onSubmit;
 }
 describe("ProvisioningForm", () => {

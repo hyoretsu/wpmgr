@@ -25,8 +25,8 @@ export function ProvisioningForm({ onSubmit, onClose, pending, error }: Props) {
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
     </DialogBody>
     <DialogFooter>
-      <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-      <Button type="submit" disabled={pending}>{pending ? "Starting provisioning..." : "Provision WordPress"}</Button>
+      <Button type="button" variant="outline" className="cursor-pointer" onClick={onClose}>Cancel</Button>
+      <Button type="submit" className="cursor-pointer" disabled={pending}>{pending ? "Starting provisioning..." : "Provision WordPress"}</Button>
     </DialogFooter>
   </form>;
 }
