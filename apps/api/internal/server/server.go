@@ -53,6 +53,7 @@ import (
 	"github.com/mosamlife/wpmgr/apps/api/internal/settings"
 	"github.com/mosamlife/wpmgr/apps/api/internal/sharing"
 	"github.com/mosamlife/wpmgr/apps/api/internal/site"
+"github.com/mosamlife/wpmgr/apps/api/internal/provisioning"
 	siteevents "github.com/mosamlife/wpmgr/apps/api/internal/site/events"
 	"github.com/mosamlife/wpmgr/apps/api/internal/sitedestination"
 	"github.com/mosamlife/wpmgr/apps/api/internal/sitetag"
@@ -75,6 +76,7 @@ type Deps struct {
 	AuditH   *audit.Handler
 	TenantH  *tenant.Handler
 	SiteH    *site.Handler
+ ProvisioningH *provisioning.Handler
 	// SiteEventsH serves the M21 tenant-scoped connection-lifecycle SSE stream at
 	// GET /api/v1/sites/events (ADR-038). nil ⇒ the route is not mounted.
 	SiteEventsH  *siteevents.Handler
@@ -669,7 +671,8 @@ func New(deps Deps) *Server {
 		// carries its own RequireOrgScope and instance-authority gate.
 		deps.SettingsH.Register(v1Auth)
 	}
-	if deps.UpdateH != nil {
+	if deps.ProvisioningH != nil { deps.ProvisioningH.Register(v1) }
+ if deps.UpdateH != nil {
 		deps.UpdateH.Register(v1)
 	}
 	if deps.BackupH != nil {

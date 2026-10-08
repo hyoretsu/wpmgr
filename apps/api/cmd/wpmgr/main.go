@@ -95,6 +95,7 @@ import (
 	"github.com/mosamlife/wpmgr/apps/api/internal/settings"
 	"github.com/mosamlife/wpmgr/apps/api/internal/sharing"
 	"github.com/mosamlife/wpmgr/apps/api/internal/site"
+"github.com/mosamlife/wpmgr/apps/api/internal/provisioning"
 	siteevents "github.com/mosamlife/wpmgr/apps/api/internal/site/events"
 	"github.com/mosamlife/wpmgr/apps/api/internal/sitedestination"
 	"github.com/mosamlife/wpmgr/apps/api/internal/sitetag"
@@ -3053,7 +3054,12 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 
 	filesH := files.NewHandler(filesSvc, auditRec)
 
-	srv := server.New(server.Deps{
+	provisioningConfig, err := provisioning.LoadConfig(cfg.Hosted.Enabled)
+ if err != nil { logger.Error("provisioning configuration invalid", "error", err); os.Exit(1) }
+ provisioningRepo := provisioning.NewRepo(pool, riverClient)
+ provisioningRepo.SetSiteCreationGate(billingSvc)
+ provisioningH := provisioning.NewHandler(provisioningRepo, siteDestAgeID, provisioningConfig)
+ srv := server.New(server.Deps{
 		Config:            cfg,
 		Logger:            logger,
 		Pool:              pool,
@@ -3065,6 +3071,7 @@ func run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		AuditH:            audit.NewHandler(auditRec),
 		TenantH:           tenant.NewHandler(tenantSvc, auditRec),
 		SiteH:             siteH,
+ ProvisioningH: provisioningH,
 		SiteEventsH:       siteEventsH,
 		MCPTransportH:     mcpTransportH,
 		MCPOAuthH:         mcpOAuthH,
