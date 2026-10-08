@@ -102,4 +102,14 @@ func TestProvisioningAtomicTenantIsolationAndRetry(t *testing.T) {
 	}); e != nil {
 		t.Fatal(e)
 	}
+	if e = app.InTenantTx(ctx, tenantA, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE river_job SET state='cancelled',finalized_at=now() WHERE kind='provisioning_run' AND args->>'id'=$1`, record.ID.String())
+		return err
+	}); e != nil {
+		t.Fatal(e)
+	}
+	stopped, _, err := repo.Get(ctx, tenantA, record.SiteID)
+	if err != nil || stopped.Status != "failed" || stopped.ErrorCode != "provisioning_job_stopped" {
+		t.Fatal("stopped River job must expose retry", err, stopped.Status, stopped.ErrorCode)
+	}
 }

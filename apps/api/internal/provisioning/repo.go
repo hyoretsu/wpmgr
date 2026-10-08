@@ -77,6 +77,16 @@ func (r *Repo) Get(ctx context.Context, tenantID, siteID uuid.UUID) (Record, []b
 	var out Record
 	var secret []byte
 	e := r.pool.InTenantTx(ctx, tenantID, func(tx pgx.Tx) error {
+		// River may exhaust crash retries or an operator may cancel a job.
+		// Surface the stopped job as retryable instead of leaving a screen
+		// permanently queued/running. A rescued or live job prevents this.
+		if _, err := tx.Exec(ctx, `UPDATE site_provisioning p
+		 SET status='failed',error_code='provisioning_job_stopped',updated_at=now()
+		 WHERE p.tenant_id=$1 AND p.site_id=$2 AND p.status IN ('queued','running')
+		 AND NOT EXISTS (SELECT 1 FROM river_job j WHERE j.kind='provisioning_run'
+		 AND j.args->>'id'=p.id::text AND j.state IN ('available','running','retryable','scheduled','pending'))`, tenantID, siteID); err != nil {
+			return err
+		}
 		var err error
 		out, secret, err = scan(tx.QueryRow(ctx, `SELECT `+columns+` FROM site_provisioning WHERE tenant_id=$1 AND site_id=$2`, tenantID, siteID))
 		return err
