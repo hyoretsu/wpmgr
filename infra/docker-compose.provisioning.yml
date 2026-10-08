@@ -24,6 +24,9 @@ services:
     restart: unless-stopped
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+    # Secret files must belong to the WordPress/WP-CLI uid, without granting
+    # unrelated root capabilities to the provisioning process.
+    cap_add: [CHOWN]
     env_file:
       - path: ${WPMGR_PROVISIONING_WORKER_ENV_FILE:-../.env.provisioning-worker}
         required: true

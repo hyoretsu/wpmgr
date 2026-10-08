@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate rendered Compose configuration without printing environment secrets."""
 import json
+from pathlib import PurePosixPath
 import sys
 
 
@@ -25,8 +26,16 @@ def check(config):
                 raise ValueError("MariaDB provisioning credential exposed outside worker")
     if worker.get("ports") or worker.get("privileged"):
         raise ValueError("worker must have no published ports or privileged flag")
+    if set(worker.get("cap_drop", [])) != {"ALL"} or set(worker.get("cap_add", [])) != {"CHOWN"}:
+        raise ValueError("worker requires only CHOWN with all other capabilities dropped")
     if not any(m.get("target") == "/var/run/docker.sock" for m in worker.get("volumes", [])):
         raise ValueError("worker Docker socket missing")
+    state_dir = worker.get("environment", {}).get("WPMGR_PROVISIONING_STATE_DIR", "")
+    if not isinstance(state_dir, str) or not PurePosixPath(state_dir).is_absolute():
+        raise ValueError("worker state directory must be absolute")
+    if not any(m.get("type") == "bind" and m.get("source") == state_dir
+               and m.get("target") == state_dir for m in worker.get("volumes", [])):
+        raise ValueError("worker state directory must use identical host and container paths")
 
 
 def main():
