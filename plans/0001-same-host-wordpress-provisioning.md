@@ -17,3 +17,5 @@ Approved scope: self-hosted, explicitly enabled provisioning restricted to confi
 No push, PR, public DNS changes, remote database operations, deployment or release. Private write-surface specification missing; standalone provisioning scope only. User authorizes proceeding despite missing generators, but generated output must never be hand-edited. Existing unrelated package manifest/lock edits are excluded.
 
 Persistence: additive migration creation/reapplication passed isolated PostgreSQL smoke; no sqlc input queries added. Atlas-compatible hash reconstruction matched original manifest before update. Infrastructure boundary and preflight regression suites passed locally. Repository-path tenant/RLS and runtime verification remain pending.
+
+Security review performed on committed range; acceptance blocked pending resource-ownership and interrupted-worker corrections. Go provisioning unit checks and worker compilation passed. Dashboard targeted suite running. Docker runtime fixture added; local ACME infrastructure images now available. Full enrollment and final integration acceptance remain outstanding.
