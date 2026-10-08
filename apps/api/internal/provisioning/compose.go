@@ -39,7 +39,11 @@ func composeDocument(r Record, dir string) ([]byte, error) {
 	wp["labels"] = map[string]string{ownerLabel: r.ID.String(), "caddy": r.Domain, "caddy.reverse_proxy": "{{upstreams 80}}", "caddy_ingress_network": r.Config.ProxyNetwork}
 	cli["image"] = r.Config.WPCLIImage
 	cli["user"] = "33:33"
-	cli["environment"] = map[string]string{"HOME": "/tmp"}
+	cliEnv := map[string]string{"HOME": "/tmp"}
+	for k, v := range env {
+		cliEnv[k] = v
+	}
+	cli["environment"] = cliEnv
 	cli["profiles"] = []string{"cli"}
 	cli["secrets"] = names
 	return json.Marshal(map[string]any{"name": name, "services": map[string]any{"wordpress": wp, "cli": cli}, "volumes": map[string]any{volume: map[string]any{"external": true}}, "networks": map[string]any{"proxy": map[string]any{"external": true, "name": r.Config.ProxyNetwork}}, "secrets": secrets})

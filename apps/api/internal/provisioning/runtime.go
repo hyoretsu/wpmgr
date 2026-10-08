@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -45,7 +44,12 @@ type Runtime struct {
 func NewRuntime(dir, user, password string, enrollment Enrollment) *Runtime {
 	return &Runtime{StateDir: dir, MariaDBUsername: user, MariaDBPassword: password, Enrollment: enrollment, Command: hostCommander{}, HTTP: httpclient.New(httpclient.DefaultConfig())}
 }
-func runtimeError(code string) error { return errors.New(code) }
+
+type RuntimeError string
+
+func (e RuntimeError) Error() string { return string(e) }
+func (e RuntimeError) Code() string  { return string(e) }
+func runtimeError(code string) error { return RuntimeError(code) }
 func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progress func(string) error) error {
 	if r.Enrollment == nil || r.Command == nil || r.HTTP == nil || !filepath.IsAbs(r.StateDir) {
 		return runtimeError("worker_configuration")
@@ -57,7 +61,13 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 	if err := os.Chmod(dir, 0700); err != nil {
 		return runtimeError("state_unavailable")
 	}
-	secret := func(n, v string) error { return os.WriteFile(filepath.Join(dir, n), []byte(v), 0600) }
+	secret := func(n, v string) error {
+		p := filepath.Join(dir, n)
+		if err := os.WriteFile(p, []byte(v), 0600); err != nil {
+			return err
+		}
+		return os.Chown(p, 33, 33)
+	}
 	if err := secret("db_password", creds.DatabasePassword); err != nil {
 		return runtimeError("state_unavailable")
 	}
@@ -122,8 +132,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 	if err = progress("install"); err != nil {
 		return err
 	}
-	payload, _ := json.Marshal(map[string]string{"url": "https://" + rec.Domain, "title": rec.Title, "user": rec.AdminUsername, "email": rec.AdminEmail, "password": creds.AdminPassword})
-	script := `define('WP_INSTALLING', true); require '/var/www/html/wp-load.php';require '/var/www/html/wp-admin/includes/upgrade.php';$v=json_decode(base64_decode('` + base64PHP(payload) + `'),true); if (!is_blog_installed()) { wp_install($v['title'],$v['user'],$v['email'],true,'',$v['password']);update_option('home',$v['url']);update_option('siteurl',$v['url']); } if (!is_blog_installed() || get_option('home') !== $v['url'] || get_option('blogname') !== $v['title']) { WP_CLI::halt(1); }`
+	script := installScript(rec, creds)
 	// WP config creation happens in the WordPress entrypoint; allow a bounded startup window.
 	for attempt := 0; attempt < 12; attempt++ {
 		_, err = cli(script)
@@ -156,7 +165,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 			return runtimeError("agent_enrollment_failed")
 		}
 		v, _ := json.Marshal(map[string]string{"url": rec.Config.ControlPlaneURL, "code": code})
-		script = `require '/var/www/html/wp-load.php';$v=json_decode(base64_decode('` + base64PHP(v) + `'),true); $k=new \WPMgr\Agent\Keystore();$s=new \WPMgr\Agent\Settings();$s->setControlPlaneUrl($v['url']);$e=new \WPMgr\Agent\Enrollment($k,$s,new \WPMgr\Agent\Signer($k),new \WPMgr\Agent\Commands\MetadataCommand(new \WPMgr\Agent\AgeIdentity($k)));$a=$e->enroll($v['code']);if (!$a['ok']) {WP_CLI::halt(1);}`
+		script = `require '/var/www/html/wp-load.php';$v=json_decode(base64_decode('` + base64PHP(v) + `'),true); $k=new \WPMgr\Agent\Keystore();$s=new \WPMgr\Agent\Settings();$s->setControlPlaneUrl($v['url']);$e=new \WPMgr\Agent\Enrollment($k,$s,new \WPMgr\Agent\Signer($k),new \WPMgr\Agent\Commands\MetadataCommand(new \WPMgr\Agent\Support\AgeIdentity($k)));$a=$e->enroll($v['code']);if (!$a['ok']) {WP_CLI::halt(1);}`
 		if _, err = cli(script); err != nil {
 			return runtimeError("agent_enrollment_failed")
 		}
@@ -174,7 +183,12 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 		return runtimeError("https_unavailable")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	var identity struct {
+		URL        string   `json:"url"`
+		Name       string   `json:"name"`
+		Namespaces []string `json:"namespaces"`
+	}
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&identity) != nil || identity.URL != "https://"+rec.Domain || identity.Name != rec.Title || len(identity.Namespaces) == 0 {
 		return runtimeError("https_unavailable")
 	}
 	return nil
@@ -311,4 +325,9 @@ func (r *Runtime) databaseUser(ctx context.Context, conn *sql.Conn, c *mysql.Con
 func base64PHP(v []byte) string { return base64.StdEncoding.EncodeToString(v) }
 func escapePHP(v string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(v, "\\", "\\\\"), "'", "\\'")
+}
+
+func installScript(rec Record, creds Credentials) string {
+	payload, _ := json.Marshal(map[string]string{"url": "https://" + rec.Domain, "domain": rec.Domain, "title": rec.Title, "user": rec.AdminUsername, "email": rec.AdminEmail, "password": creds.AdminPassword})
+	return `$v=json_decode(base64_decode('` + base64PHP(payload) + `'),true);define('WP_INSTALLING',true);$_SERVER['HTTP_HOST']=$v['domain'];$_SERVER['REQUEST_URI']='/';$_SERVER['HTTPS']='on';require '/var/www/html/wp-load.php';require '/var/www/html/wp-admin/includes/upgrade.php';if(!is_blog_installed()){wp_install($v['title'],$v['user'],$v['email'],true,'',$v['password']);}if(!is_blog_installed()||get_option('home')!==$v['url']||get_option('siteurl')!==$v['url']||get_option('blogname')!==$v['title']){WP_CLI::halt(1);}`
 }
