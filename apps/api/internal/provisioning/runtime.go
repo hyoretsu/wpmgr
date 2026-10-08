@@ -191,14 +191,10 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 		return runtimeError("https_unavailable")
 	}
 	defer resp.Body.Close()
-	var identity struct {
-		URL        string   `json:"url"`
-		Name       string   `json:"name"`
-		Namespaces []string `json:"namespaces"`
-	}
-	if resp.Header.Get("X-WPMgr-Provisioning-ID") != marker || resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&identity) != nil || identity.URL != "https://"+rec.Domain || identity.Name != rec.Title || len(identity.Namespaces) == 0 {
+	if !verifiedHTTPS(resp, rec, marker) {
 		return runtimeError("https_unavailable")
 	}
+
 	return nil
 }
 func hasOwner(out []byte, id string) bool {
@@ -353,4 +349,16 @@ func instanceMarker(rec Record, creds Credentials) string {
 func identityScript(marker string) string {
 	code := `<?php add_filter('rest_post_dispatch',function($response){$response->header('X-WPMgr-Provisioning-ID','` + marker + `');return $response;});`
 	return `require '/var/www/html/wp-load.php';$path=WP_CONTENT_DIR.'/mu-plugins/wpmgr-provisioning-identity.php';$code=base64_decode('` + base64PHP([]byte(code)) + `');if(file_exists($path)){if(file_get_contents($path)!==$code){WP_CLI::halt(1);}}else{if(!wp_mkdir_p(dirname($path))||file_put_contents($path,$code,LOCK_EX)===false){WP_CLI::halt(1);}}`
+}
+
+func verifiedHTTPS(resp *http.Response, rec Record, marker string) bool {
+	var identity struct {
+		URL        string   `json:"url"`
+		Name       string   `json:"name"`
+		Namespaces []string `json:"namespaces"`
+	}
+	if resp.Header.Get("X-WPMgr-Provisioning-ID") != marker || resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&identity) != nil || identity.URL != "https://"+rec.Domain || identity.Name != rec.Title || len(identity.Namespaces) == 0 {
+		return false
+	}
+	return true
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
 	"os/exec"
 	"strings"
 	"testing"
@@ -118,5 +120,35 @@ func TestDatabaseNamesDoNotExpandGrantScope(t *testing.T) {
 		if env["WORDPRESS_DB_NAME"] != name || env["WORDPRESS_DB_USER"] != name {
 			t.Fatal("runtime and wordpress database names differ")
 		}
+	}
+}
+
+func TestHTTPSRejectsDifferentInstallation(t *testing.T) {
+	record := Record{ID: uuid.New(), Domain: "fixture.example", Title: "Fixture"}
+	expected := instanceMarker(record, Credentials{AdminPassword: "persistent-secret"})
+	body := `{"url":"https://fixture.example","name":"Fixture","namespaces":["wp/v2"]}`
+	response := func(marker string) *http.Response {
+		r := &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}
+		r.Header.Set("X-WPMgr-Provisioning-ID", marker)
+		return r
+	}
+	for _, marker := range []string{"", "other"} {
+		if verifiedHTTPS(response(marker), record, expected) {
+			t.Fatal("unrelated HTTPS marked complete")
+		}
+	}
+	if !verifiedHTTPS(response(expected), record, expected) {
+		t.Fatal("owned installation rejected")
+	}
+	wrong := response(expected)
+	wrong.Body = io.NopCloser(strings.NewReader(`{"url":"https://other.example","name":"Fixture","namespaces":["wp/v2"]}`))
+	if verifiedHTTPS(wrong, record, expected) {
+		t.Fatal("wrong domain accepted")
+	}
+	script := identityScript(expected)
+	cmd := exec.Command("php", "-l")
+	cmd.Stdin = strings.NewReader("<?php " + script)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("identity PHP invalid: %s", out)
 	}
 }
