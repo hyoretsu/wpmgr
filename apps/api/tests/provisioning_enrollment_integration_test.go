@@ -32,9 +32,9 @@ import (
 
 // This fixture exercises Runtime and real WordPress enrollment against the
 // production site lifecycle and application-role Postgres pool. Local HTTP
-// artifact/control-plane fixtures bypass production LoadConfig HTTPS validation
-// and allow the exact artifact URL through WordPress safe-download checks.
-// Production transport remains unchanged; ACME uses a local HTTPS fixture.
+// local artifact/control-plane fixtures bypass production LoadConfig HTTPS
+// validation. The package is staged in this disposable WordPress volume so
+// WP-CLI retains its safe-download checks. ACME uses a local HTTPS fixture.
 type fixtureCommander struct{ t *testing.T }
 
 func (c fixtureCommander) Run(ctx context.Context, args []string, input []byte) ([]byte, error) {
@@ -93,11 +93,6 @@ func TestRuntimeRealFleetEnrollmentAndRetry(t *testing.T) {
 		t.Fatalf("read agent artifact: %v", err)
 	}
 	controlPlane := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/agent.zip" {
-			w.Header().Set("Content-Type", "application/zip")
-			_, _ = w.Write(artifact)
-			return
-		}
 		if r.URL.Path == "/enroll" {
 			enrollCalls.Add(1)
 		}
@@ -185,7 +180,7 @@ func TestRuntimeRealFleetEnrollmentAndRetry(t *testing.T) {
 	record.SiteID = pending.ID
 	// Resource names derive from the actual pre-created Fleet site.
 	name = "wpmgr_" + strings.ReplaceAll(record.SiteID.String(), "-", "")
-	record.Config = provisioning.RuntimeConfig{MariaDBAddress: fmt.Sprintf("host.docker.internal:%d", dbPort), ProxyNetwork: network, WordPressImage: os.Getenv("WPMGR_TEST_WORDPRESS_IMAGE"), WPCLIImage: os.Getenv("WPMGR_TEST_WPCLI_IMAGE"), AgentPackage: cpURL + "/agent.zip", ControlPlaneURL: cpURL}
+	record.Config = provisioning.RuntimeConfig{MariaDBAddress: fmt.Sprintf("host.docker.internal:%d", dbPort), ProxyNetwork: network, WordPressImage: os.Getenv("WPMGR_TEST_WORDPRESS_IMAGE"), WPCLIImage: os.Getenv("WPMGR_TEST_WPCLI_IMAGE"), AgentPackage: "/var/www/html/wpmgr-enrollment-fixture.zip", ControlPlaneURL: cpURL}
 	creds := provisioning.Credentials{AdminPassword: "persistent_fixture_password", DatabasePassword: "persistent_database_password", Salts: map[string]string{}}
 	for _, k := range []string{"AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY", "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT"} {
 		creds.Salts[k] = "fixture-salt-" + k
@@ -193,27 +188,16 @@ func TestRuntimeRealFleetEnrollmentAndRetry(t *testing.T) {
 	runtime := provisioning.NewRuntime(os.Getenv("WPMGR_TEST_STATE_DIR"), "root", "fixture_password", realEnrollmentFixture{repo: siteRepo})
 	runtime.Command = fixtureCommander{t: t}
 	runtime.HTTP = httpclient.New(httpclient.Config{Timeout: 10 * time.Second, AllowPrivateNetworks: true, InsecureSkipTLSVerify: true})
-	// WP-CLI safe downloads reject private fixture hosts and dynamic ports.
-	// Allow only this fixture artifact URL inside this disposable WordPress.
-	artifactURL := cpURL + "/agent.zip"
-	fixtureMU := fmt.Sprintf(`<?php
-add_filter('http_request_host_is_external', static function($external, $host, $url) {
-    return $url === %q ? true : $external;
-}, 10, 3);
-add_filter('http_allowed_safe_ports', static function($ports, $host, $url) {
-    if ($url === %q) { $ports[] = %d; }
-    return $ports;
-}, 10, 3);
-`, artifactURL, artifactURL, cpListener.Addr().(*net.TCPAddr).Port)
+	// Stage the real package only in this fixture's owned WordPress volume.
+	// Production config still requires an HTTPS package URL; the test avoids
+	// relaxing WordPress's private-address and dynamic-port download checks.
 	progress := func(step string) error {
 		if step != "agent" {
 			return nil
 		}
-		file := filepath.Join(os.Getenv("WPMGR_TEST_STATE_DIR"), record.ID.String(), "compose.json")
-		command := exec.CommandContext(ctx, "docker", "compose", "-f", file, "run", "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "--skip-wordpress", "/dev/stdin")
-		command.Stdin = strings.NewReader(`require '/var/www/html/wp-load.php';$dir=WP_CONTENT_DIR.'/mu-plugins';if(!wp_mkdir_p($dir)||file_put_contents($dir.'/wpmgr-enrollment-fixture.php',base64_decode('` + base64.StdEncoding.EncodeToString([]byte(fixtureMU)) + `'))===false){WP_CLI::halt(1);}`)
+		command := exec.CommandContext(ctx, "docker", "cp", os.Getenv("WPMGR_TEST_AGENT_ZIP"), name+":/var/www/html/wpmgr-enrollment-fixture.zip")
 		if out, err := command.CombinedOutput(); err != nil {
-			return fmt.Errorf("install fixture download allowance: %w: %s", err, out)
+			return fmt.Errorf("stage fixture package: %w: %s", err, out)
 		}
 		return nil
 	}
