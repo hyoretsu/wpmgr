@@ -165,7 +165,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 	}
 	if !connected {
 		pkg, _ := json.Marshal(rec.Config.AgentPackage)
-		if _, err = cli(`require '/var/www/html/wp-load.php';WP_CLI::runcommand('plugin install '.escapeshellarg(json_decode('` + escapePHP(string(pkg)) + `',true)).' --activate', ['exit_error'=>true]);`); err != nil {
+		if _, err = cli(`require '/var/www/html/wp-load.php';if(!class_exists('WPMgr\\Agent\\Enrollment')){WP_CLI::runcommand('plugin install '.escapeshellarg(json_decode('` + escapePHP(string(pkg)) + `',true)).' --activate', ['exit_error'=>true]);}`); err != nil {
 			return runtimeError("agent_install_failed")
 		}
 		code, e := r.Enrollment.Mint(ctx, rec.TenantID, rec.SiteID)
