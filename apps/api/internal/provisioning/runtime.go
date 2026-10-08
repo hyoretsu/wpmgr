@@ -95,7 +95,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 		return r.Command.Run(ctx, append([]string{"docker"}, args...), nil)
 	}
 	cli := func(script string) ([]byte, error) {
-		return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "--skip-wordpress", "/dev/stdin"}, []byte(script))
+		return r.runCLI(ctx, rec, file, script)
 	}
 	for _, image := range []string{rec.Config.WordPressImage, rec.Config.WPCLIImage} {
 		if _, err = run("image", "inspect", image); err != nil {
@@ -229,6 +229,10 @@ func (r *Runtime) ensureResource(ctx context.Context, kind, name, id string) err
 	if err != nil {
 		return runtimeError(kind + "_create_failed")
 	}
+	out, err = r.Command.Run(ctx, []string{"docker", kind, "inspect", name}, nil)
+	if err != nil || !hasOwner(out, id) {
+		return runtimeError(kind + "_collision")
+	}
 	return nil
 }
 func (r *Runtime) database(ctx context.Context, rec Record, creds Credentials) error {
@@ -361,4 +365,47 @@ func verifiedHTTPS(resp *http.Response, rec Record, marker string) bool {
 		return false
 	}
 	return true
+}
+
+func (r *Runtime) runCLI(ctx context.Context, rec Record, file, script string) ([]byte, error) {
+	name := resourceName(rec) + "_cli"
+	if err := r.checkCLI(ctx, name, rec.ID.String()); err != nil {
+		return nil, err
+	}
+	return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "--skip-wordpress", "/dev/stdin"}, []byte(script))
+}
+func (r *Runtime) checkCLI(ctx context.Context, name, id string) error {
+	out, err := r.Command.Run(ctx, []string{"docker", "container", "inspect", name}, nil)
+	if err != nil {
+		out, err = r.Command.Run(ctx, []string{"docker", "ps", "-a", "--format", "{{.Names}}"}, nil)
+		if err != nil {
+			return runtimeError("docker_unavailable")
+		}
+		for _, n := range strings.Fields(string(out)) {
+			if n == name {
+				return runtimeError("cli_collision")
+			}
+		}
+		return nil
+	}
+	if !hasOwner(out, id) {
+		return runtimeError("cli_collision")
+	}
+	var items []struct {
+		State struct {
+			Running bool
+			Status  string
+		}
+	}
+	if json.Unmarshal(out, &items) != nil || len(items) != 1 {
+		return runtimeError("cli_collision")
+	}
+	if items[0].State.Running || items[0].State.Status == "created" || items[0].State.Status == "restarting" {
+		return runtimeError("cli_busy")
+	}
+	// Only a stopped, owned helper may be removed; site volumes stay intact.
+	if _, err = r.Command.Run(ctx, []string{"docker", "container", "rm", name}, nil); err != nil {
+		return runtimeError("cli_busy")
+	}
+	return nil
 }
