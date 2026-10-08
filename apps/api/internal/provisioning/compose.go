@@ -47,5 +47,9 @@ func composeDocument(r Record, dir string) ([]byte, error) {
 	cli["environment"] = cliEnv
 	cli["profiles"] = []string{"cli"}
 	cli["secrets"] = names
-	return json.Marshal(map[string]any{"name": name, "services": map[string]any{"wordpress": wp, "cli": cli}, "volumes": map[string]any{volume: map[string]any{"external": true}}, "networks": map[string]any{"proxy": map[string]any{"external": true, "name": r.Config.ProxyNetwork}}, "secrets": secrets})
+	raw, err := json.Marshal(map[string]any{"name": name, "services": map[string]any{"wordpress": wp, "cli": cli}, "volumes": map[string]any{volume: map[string]any{"external": true}}, "networks": map[string]any{"proxy": map[string]any{"external": true, "name": r.Config.ProxyNetwork}}, "secrets": secrets})
+	if err != nil {
+		return nil, err
+	}
+	return []byte(strings.ReplaceAll(string(raw), "$", "$$")), nil
 }
