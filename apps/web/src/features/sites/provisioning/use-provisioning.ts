@@ -24,7 +24,7 @@ export function useProvisioningStatus(tenantId: string, siteId: string) {
   const cache = useQueryClient();
   return useQuery({ queryKey: provisioningKeys.site(tenantId, siteId), enabled: Boolean(tenantId && siteId), queryFn: async () => {
     const { data, error, response } = await getSiteProvisioning({ path: { siteId } });
-    if (response.status === 404) return null;
+    if (response?.status === 404) return null;
     if (error) throw requestError(error);
     if (!data) throw new Error("Empty provisioning status.");
     if (data.status === "complete") void cache.invalidateQueries({ queryKey: sitesKeys.lists() });

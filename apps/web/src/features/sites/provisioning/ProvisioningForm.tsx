@@ -11,7 +11,8 @@ export function ProvisioningForm({ onSubmit, onClose, pending, error }: Props) {
   return <form noValidate onSubmit={event => {
       const fields = new FormData(event.currentTarget);
       for (const name of ["domain", "title", "admin_username", "admin_email"] as const) {
-        form.setValue(name, String(fields.get(name) ?? ""));
+        const value = fields.get(name);
+        form.setValue(name, typeof value === "string" ? value : "");
       }
       void form.handleSubmit(onSubmit)(event);
     }}>

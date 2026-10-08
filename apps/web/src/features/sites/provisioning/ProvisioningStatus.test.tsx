@@ -14,7 +14,7 @@ beforeEach(() => {
 });
 describe("provisioning status", () => {
   it("keeps loading separate from missing state", () => {
-    vi.mocked(useProvisioningStatus).mockReturnValue(mockQueryResult({ isPending: true, data: undefined }));
+    vi.mocked(useProvisioningStatus).mockReturnValue(mockQueryResult<ProvisioningRecord | null>({ isPending: true, data: undefined }));
     renderWithProviders(<ProvisioningStatus tenantId="tenant" siteId="site" />);
     expect(screen.getByRole("status", { name: "Loading provisioning status" })).toBeInTheDocument();
     expect(screen.queryByText(/needs attention/)).not.toBeInTheDocument();
