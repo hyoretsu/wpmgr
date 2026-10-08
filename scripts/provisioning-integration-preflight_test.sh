@@ -8,7 +8,7 @@ cat > "$fixture/docker" <<'MOCK'
 case "$1" in
 info|network) exit 0 ;;
 image) [[ "${MOCK_MISSING_IMAGE:-false}" == false ]] ;;
-compose) printf '%s\n' '{"services":{"api":{},"provisioning-worker":{"volumes":[{"target":"/var/run/docker.sock"}]}}}' ;;
+compose) printf '%s\n' '{"services":{"api":{},"provisioning-worker":{"cap_drop":["ALL"],"cap_add":["CHOWN"],"environment":{"WPMGR_PROVISIONING_STATE_DIR":"/tmp/provisioning-test"},"volumes":[{"target":"/var/run/docker.sock"},{"type":"bind","source":"/tmp/provisioning-test","target":"/tmp/provisioning-test"}]}}}' ;;
 *) exit 9 ;;
 esac
 MOCK
