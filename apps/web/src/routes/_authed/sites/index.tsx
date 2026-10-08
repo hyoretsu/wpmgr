@@ -31,6 +31,7 @@ import { useSitesSelection } from "@/features/sites/use-sites-selection";
 import { useSitesDensity } from "@/features/sites/use-sites-density";
 import { useSitesView, useCardSize } from "@/features/sites/use-sites-view";
 import { AddSiteDialog } from "@/features/sites/add-site-dialog";
+import { ProvisionWordPressDialog, ProvisioningRecovery } from "@/features/sites/provisioning";
 import { useSitesLiveSync } from "@/features/sites/use-sites-live";
 import {
   useRevokeSite,
@@ -1013,8 +1014,10 @@ function SitesPage() {
       <PageHeader
         title="Sites"
         subline={sitesSubline}
-        actions={operate ? <AddSiteDialog /> : undefined}
+        actions={operate ? <div className="flex flex-wrap gap-2"><ProvisionWordPressDialog /><AddSiteDialog /></div> : undefined}
       />
+
+      <ProvisioningRecovery siteIds={[...(sites ?? []), ...(disconnectedSites ?? [])].map(site => site.id)} />
 
       {isPending ? (
         // Show the appropriate skeleton based on the current view.
