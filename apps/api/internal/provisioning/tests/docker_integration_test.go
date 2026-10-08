@@ -124,7 +124,12 @@ func TestRuntimeDatabaseInstallRestartAndRetry(t *testing.T) {
 			t.Fatal("inspect fixture wordpress")
 		}
 		target, _ := url.Parse("http://" + inspect[0].NetworkSettings.Networks[network].IPAddress)
-		httputil.NewSingleHostReverseProxy(target).ServeHTTP(w, r)
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		proxy.ModifyResponse = func(resp *http.Response) error {
+			t.Logf("fixture HTTPS response status=%d marker=%t", resp.StatusCode, resp.Header.Get("X-WPMgr-Provisioning-ID") != "")
+			return nil
+		}
+		proxy.ServeHTTP(w, r)
 	}))
 	defer server.Close()
 	record.Domain = strings.TrimPrefix(server.URL, "https://")

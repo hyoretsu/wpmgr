@@ -185,7 +185,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 	if err = progress("https"); err != nil {
 		return err
 	}
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+rec.Domain+"/wp-json/", nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+rec.Domain+"/?rest_route=/", nil)
 	resp, err := r.HTTP.DoOnce(req)
 	if err != nil {
 		return runtimeError("https_unavailable")
