@@ -1096,3 +1096,18 @@ export type DeclineAbilityRequestResponse = AbilityRequest;
 export type UndoAbilityRequestResponse = AbilityRequest;
 export type GetSiteContentEditingResponse = GeneratedContentEditingState;
 export type EnableSiteContentEditingResponse = GeneratedContentEditingState;
+
+// Same-host WordPress provisioning.
+export {
+  getProvisioningConfig,
+  createProvisioning,
+  getSiteProvisioning,
+  retrySiteProvisioning,
+  getSiteProvisioningCredentials,
+} from "./generated/sdk.gen";
+export type {
+  ProvisioningConfig,
+  CreateProvisioning,
+  ProvisioningRecord,
+  ProvisioningCredentials,
+} from "./generated/types.gen";
