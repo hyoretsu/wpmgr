@@ -250,7 +250,7 @@ func (r *Runtime) database(ctx context.Context, rec Record, creds Credentials) e
 		return runtimeError("database_unavailable")
 	}
 	defer conn.Close()
-	name := resourceName(rec)
+	name := databaseName(rec)
 	var lock int
 	if err = conn.QueryRowContext(ctx, "SELECT GET_LOCK(?, 0)", name).Scan(&lock); err != nil || lock != 1 {
 		return runtimeError("database_busy")
@@ -334,3 +334,6 @@ func installScript(rec Record, creds Credentials) string {
 	payload, _ := json.Marshal(map[string]string{"url": "https://" + rec.Domain, "domain": rec.Domain, "title": rec.Title, "user": rec.AdminUsername, "email": rec.AdminEmail, "password": creds.AdminPassword})
 	return `$v=json_decode(base64_decode('` + base64PHP(payload) + `'),true);define('WP_INSTALLING',true);$_SERVER['HTTP_HOST']=$v['domain'];$_SERVER['REQUEST_URI']='/';$_SERVER['HTTPS']='on';require '/var/www/html/wp-load.php';require '/var/www/html/wp-admin/includes/upgrade.php';if(!is_blog_installed()){wp_install($v['title'],$v['user'],$v['email'],true,'',$v['password']);}if(!is_blog_installed()||get_option('home')!==$v['url']||get_option('siteurl')!==$v['url']||get_option('blogname')!==$v['title']){WP_CLI::halt(1);}`
 }
+
+// Database names contain no SQL grant wildcards. Docker names stay independent.
+func databaseName(r Record) string { return "wpmgr" + strings.ReplaceAll(r.SiteID.String(), "-", "") }

@@ -11,7 +11,7 @@ const ownerLabel = "app.wpmgr.provisioning-id"
 func resourceName(r Record) string { return "wpmgr_" + strings.ReplaceAll(r.SiteID.String(), "-", "") }
 func composeDocument(r Record, dir string) ([]byte, error) {
 	name := resourceName(r)
-	env := map[string]string{"WORDPRESS_DB_HOST": r.Config.MariaDBAddress, "WORDPRESS_DB_NAME": name, "WORDPRESS_DB_USER": name, "WORDPRESS_DB_PASSWORD_FILE": "/run/secrets/db_password"}
+	env := map[string]string{"WORDPRESS_DB_HOST": r.Config.MariaDBAddress, "WORDPRESS_DB_NAME": databaseName(r), "WORDPRESS_DB_USER": databaseName(r), "WORDPRESS_DB_PASSWORD_FILE": "/run/secrets/db_password"}
 	secrets := map[string]any{"db_password": map[string]string{"file": filepath.Join(dir, "db_password")}}
 	names := []string{"db_password"}
 	for _, key := range []string{"AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY", "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT"} {
