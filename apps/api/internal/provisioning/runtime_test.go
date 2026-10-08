@@ -95,3 +95,28 @@ func TestRuntimeErrorsExposeSafeCodes(t *testing.T) {
 		t.Fatal("failure lost actionable code")
 	}
 }
+
+func TestDatabaseNamesDoNotExpandGrantScope(t *testing.T) {
+	record := Record{SiteID: uuid.MustParse("12345678-1234-1234-1234-123456789abc")}
+	name := databaseName(record)
+	if strings.ContainsAny(name, "_%") || name == resourceName(record) {
+		t.Fatalf("database grant wildcard: %q", name)
+	}
+	record.Config = RuntimeConfig{MariaDBAddress: "host.docker.internal:3306"}
+	raw, err := composeDocument(record, "/state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Services map[string]struct{ Environment map[string]string }
+	}
+	if json.Unmarshal(raw, &doc) != nil {
+		t.Fatal("bad compose")
+	}
+	for _, service := range []string{"wordpress", "cli"} {
+		env := doc.Services[service].Environment
+		if env["WORDPRESS_DB_NAME"] != name || env["WORDPRESS_DB_USER"] != name {
+			t.Fatal("runtime and wordpress database names differ")
+		}
+	}
+}

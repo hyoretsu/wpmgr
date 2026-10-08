@@ -3,9 +3,12 @@ package provisioning
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -149,6 +152,10 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 	if err != nil {
 		return runtimeError("wordpress_install_failed")
 	}
+	marker := instanceMarker(rec, creds)
+	if _, err = cli(identityScript(marker)); err != nil {
+		return runtimeError("installation_identity_failed")
+	}
 	if err = progress("agent"); err != nil {
 		return err
 	}
@@ -189,7 +196,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 		Name       string   `json:"name"`
 		Namespaces []string `json:"namespaces"`
 	}
-	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&identity) != nil || identity.URL != "https://"+rec.Domain || identity.Name != rec.Title || len(identity.Namespaces) == 0 {
+	if resp.Header.Get("X-WPMgr-Provisioning-ID") != marker || resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&identity) != nil || identity.URL != "https://"+rec.Domain || identity.Name != rec.Title || len(identity.Namespaces) == 0 {
 		return runtimeError("https_unavailable")
 	}
 	return nil
@@ -337,3 +344,13 @@ func installScript(rec Record, creds Credentials) string {
 
 // Database names contain no SQL grant wildcards. Docker names stay independent.
 func databaseName(r Record) string { return "wpmgr" + strings.ReplaceAll(r.SiteID.String(), "-", "") }
+
+func instanceMarker(rec Record, creds Credentials) string {
+	h := hmac.New(sha256.New, []byte(creds.AdminPassword))
+	h.Write([]byte(rec.ID.String()))
+	return hex.EncodeToString(h.Sum(nil))
+}
+func identityScript(marker string) string {
+	code := `<?php add_filter('rest_post_dispatch',function($response){$response->header('X-WPMgr-Provisioning-ID','` + marker + `');return $response;});`
+	return `require '/var/www/html/wp-load.php';$path=WP_CONTENT_DIR.'/mu-plugins/wpmgr-provisioning-identity.php';$code=base64_decode('` + base64PHP([]byte(code)) + `');if(file_exists($path)){if(file_get_contents($path)!==$code){WP_CLI::halt(1);}}else{if(!wp_mkdir_p(dirname($path))||file_put_contents($path,$code,LOCK_EX)===false){WP_CLI::halt(1);}}`
+}
