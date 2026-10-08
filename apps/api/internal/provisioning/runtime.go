@@ -95,7 +95,7 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 		return r.Command.Run(ctx, append([]string{"docker"}, args...), nil)
 	}
 	cli := func(script string) ([]byte, error) {
-		return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--rm", "--no-deps", "-T", "cli", "eval-file", "--skip-wordpress", "/dev/stdin"}, []byte(script))
+		return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "--skip-wordpress", "/dev/stdin"}, []byte(script))
 	}
 	for _, image := range []string{rec.Config.WordPressImage, rec.Config.WPCLIImage} {
 		if _, err = run("image", "inspect", image); err != nil {

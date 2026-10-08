@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -28,6 +29,18 @@ import (
 // This fixture exercises the production Runtime, a real external MariaDB,
 // WordPress/WP-CLI and persistent Docker resources. Enrollment is a stub; ACME
 // is represented by a local HTTPS fixture and is not claimed as verified.
+type fixtureCommander struct{ t *testing.T }
+
+func (c fixtureCommander) Run(ctx context.Context, args []string, input []byte) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd.Stdin = bytes.NewReader(input)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		c.t.Logf("fixture command failure %v: %s", args, out)
+	}
+	return out, err
+}
+
 type enrolledFixture struct{}
 
 func (enrolledFixture) Mint(context.Context, uuid.UUID, uuid.UUID) (string, error) {
@@ -121,6 +134,7 @@ func TestRuntimeDatabaseInstallRestartAndRetry(t *testing.T) {
 		creds.Salts[k] = "fixture-salt-" + k
 	}
 	runtime := provisioning.NewRuntime(os.Getenv("WPMGR_TEST_STATE_DIR"), "root", "fixture_password", enrolledFixture{})
+	runtime.Command = fixtureCommander{t: t}
 	runtime.HTTP = httpclient.New(httpclient.Config{Timeout: 10 * time.Second, AllowPrivateNetworks: true, InsecureSkipTLSVerify: true})
 	progress := func(string) error { return nil }
 	if err = runtime.Run(ctx, record, creds, progress); err == nil || err.Error() != "https_unavailable" {
@@ -135,7 +149,7 @@ func TestRuntimeDatabaseInstallRestartAndRetry(t *testing.T) {
 		t.Fatalf("restart: %v", err)
 	}
 	file := filepath.Join(os.Getenv("WPMGR_TEST_STATE_DIR"), record.ID.String(), "compose.json")
-	command := exec.CommandContext(ctx, "docker", "compose", "-f", file, "run", "--rm", "--no-deps", "-T", "cli", "eval-file", "--skip-wordpress", "/dev/stdin")
+	command := exec.CommandContext(ctx, "docker", "compose", "-f", file, "run", "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "--skip-wordpress", "/dev/stdin")
 	command.Stdin = strings.NewReader(`require '/var/www/html/wp-load.php';$u=get_user_by('login','fixtureadmin');if(!wp_check_password('persistent_fixture_password',$u->user_pass,$u->ID)||get_option('blogname')!=='Fixture title'){WP_CLI::halt(1);}`)
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("persistent installation: %s", out)
