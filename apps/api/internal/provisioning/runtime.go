@@ -368,7 +368,11 @@ func (r *Runtime) runCLI(ctx context.Context, rec Record, file, script string) (
 	if err := r.checkCLI(ctx, name, rec.ID.String()); err != nil {
 		return nil, err
 	}
-	return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "--skip-wordpress", "/dev/stdin"}, []byte(script))
+	if strings.Contains(script, "define('WP_INSTALLING',true)") {
+		script = "<?php " + strings.ReplaceAll(script, "WP_CLI::halt(1)", "exit(1)")
+		return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli", "php", "/dev/stdin"}, []byte(script))
+	}
+	return r.Command.Run(ctx, []string{"docker", "compose", "-f", file, "run", "--name", name, "--rm", "--no-deps", "-T", "cli", "wp", "eval-file", "/dev/stdin"}, []byte(strings.ReplaceAll(script, "require '/var/www/html/wp-load.php';", "")))
 }
 func (r *Runtime) checkCLI(ctx context.Context, name, id string) error {
 	out, err := r.Command.Run(ctx, []string{"docker", "container", "inspect", name}, nil)
