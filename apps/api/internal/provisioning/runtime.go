@@ -58,6 +58,9 @@ func (r *Runtime) Run(ctx context.Context, rec Record, creds Credentials, progre
 	if r.Enrollment == nil || r.Command == nil || r.HTTP == nil || !filepath.IsAbs(r.StateDir) {
 		return runtimeError("worker_configuration")
 	}
+	if err := r.checkCLI(ctx, resourceName(rec)+"_cli", rec.ID.String()); err != nil {
+		return err
+	}
 	dir := filepath.Join(r.StateDir, rec.ID.String())
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return runtimeError("state_unavailable")
