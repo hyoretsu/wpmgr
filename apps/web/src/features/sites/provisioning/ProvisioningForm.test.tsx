@@ -14,13 +14,13 @@ describe("ProvisioningForm", () => {
     fireEvent.change(screen.getByLabelText(/Domain/), { target: { value: "example.com" } });
     fireEvent.change(screen.getByLabelText(/Admin username/), { target: { value: "site-admin" } });
     fireEvent.change(screen.getByLabelText(/Admin email/), { target: { value: "admin@example.com" } });
-    fireEvent.submit(screen.getByRole("button", { name: "Provision WordPress" }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: "Create new WordPress" }).closest("form")!);
     await waitFor(() => expect(submit).toHaveBeenCalledWith({ domain: "example.com", title: "", admin_username: "site-admin", admin_email: "admin@example.com" }, expect.anything()));
   });
   it("reports invalid domain instead of starting", async () => {
     const submit = renderForm();
     fireEvent.change(screen.getByLabelText(/Domain/), { target: { value: "https://example.com" } });
-    fireEvent.submit(screen.getByRole("button", { name: "Provision WordPress" }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: "Create new WordPress" }).closest("form")!);
     expect(await screen.findByText(/Enter a bare domain/)).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
   });

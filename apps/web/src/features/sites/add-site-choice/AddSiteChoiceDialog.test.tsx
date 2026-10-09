@@ -22,20 +22,20 @@ describe("per-site setup choice", () => {
     renderWithProviders(<AddSiteChoiceDialog />);
     fireEvent.click(screen.getByRole("button", { name: "Add site" }));
     expect(screen.getByText(/share the same fleet/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Connect existing site" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connect existing" }));
     expect(screen.getByText("Managed connection form")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back to setup choices" }));
-    fireEvent.click(screen.getByRole("button", { name: "Provision new site" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create new WordPress" }));
     expect(screen.getByText("New WordPress form")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back to setup choices" }));
-    expect(screen.getByRole("button", { name: "Connect existing site" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Connect existing" })).toBeEnabled();
   });
   it.each(["pending", "error", "disabled"] as const)("keeps managed connection available when provisioning is %s", state => {
     vi.mocked(useProvisioningConfig).mockReturnValue(state === "disabled" ? mockQueryResult<ProvisioningConfig>({ data: { enabled: false } }) : state === "pending" ? mockQueryResult<ProvisioningConfig>({ isPending: true }) : mockQueryResult<ProvisioningConfig>({ isError: true, error: new Error("unavailable") }));
     renderWithProviders(<AddSiteChoiceDialog />);
     fireEvent.click(screen.getByRole("button", { name: "Add site" }));
-    expect(screen.queryByRole("button", { name: "Provision new site" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Connect existing site" }));
+    expect(screen.queryByRole("button", { name: "Create new WordPress" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Connect existing" }));
     expect(screen.getByText("Managed connection form")).toBeInTheDocument();
   });
 });

@@ -22,10 +22,10 @@ export function ProvisionWordPressDialog({ open: controlledOpen, onClose, onBack
   if (config.isError) return <Button variant="outline" className="cursor-pointer" onClick={() => void config.refetch()}>Reload provisioning availability</Button>;
   if (!config.data?.enabled) return null;
   return <>
-    {controlledOpen === undefined ? <Button variant="outline" className="cursor-pointer" onClick={() => { create.reset(); setSiteId(null); setInternalOpen(true); }}><Plus aria-hidden="true" />Provision WordPress</Button> : null}
+    {controlledOpen === undefined ? <Button variant="outline" className="cursor-pointer" onClick={() => { create.reset(); setSiteId(null); setInternalOpen(true); }}><Plus aria-hidden="true" />Create new WordPress</Button> : null}
     <Dialog open={open} onClose={() => close()}>
       {open ? <DialogContent ariaLabelledBy="provision-title">
-        <DialogHeader><DialogTitle id="provision-title">Provision WordPress</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle id="provision-title">Create new WordPress</DialogTitle></DialogHeader>
         {siteId ? <><DialogBody><ProvisioningStatus tenantId={tenantId} siteId={siteId} showCredentials /></DialogBody><DialogFooter><Button variant="outline" asChild><Link to="/sites/$siteId" params={{ siteId }} onClick={close}>View site</Link></Button><Button variant="outline" className="cursor-pointer" onClick={() => close()}>Close</Button></DialogFooter></> : <ProvisioningForm onBack={onBack} pending={create.isPending} error={create.isError ? create.error.message : undefined} onClose={() => close()} onSubmit={values => create.mutate({ ...values, title: values.title || undefined }, { onSuccess: record => setSiteId(record.site_id) })} />}
       </DialogContent> : null}
     </Dialog>

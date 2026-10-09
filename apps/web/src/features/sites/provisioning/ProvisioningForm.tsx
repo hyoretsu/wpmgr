@@ -28,7 +28,7 @@ export function ProvisioningForm({ onSubmit, onClose, pending, error, onBack }: 
     <DialogFooter>
       {onBack ? <Button type="button" variant="outline" className="cursor-pointer" disabled={pending} onClick={onBack}>Back to setup choices</Button> : null}
       <Button type="button" variant="outline" className="cursor-pointer" disabled={pending} onClick={onClose}>Cancel</Button>
-      <Button type="submit" className="cursor-pointer" disabled={pending}>{pending ? "Starting provisioning..." : "Provision WordPress"}</Button>
+      <Button type="submit" className="cursor-pointer" disabled={pending}>{pending ? "Starting provisioning..." : "Create new WordPress"}</Button>
     </DialogFooter>
   </form>;
 }
