@@ -230,6 +230,9 @@ import type {
   CreatePairingCodeData,
   CreatePairingCodeErrors,
   CreatePairingCodeResponses,
+  CreateProvisioningData,
+  CreateProvisioningErrors,
+  CreateProvisioningResponses,
   CreateRestoreData,
   CreateRestoreErrors,
   CreateRestoreResponses,
@@ -533,6 +536,9 @@ import type {
   GetPortalSummaryData,
   GetPortalSummaryErrors,
   GetPortalSummaryResponses,
+  GetProvisioningConfigData,
+  GetProvisioningConfigErrors,
+  GetProvisioningConfigResponses,
   GetPublicPricingData,
   GetPublicPricingErrors,
   GetPublicPricingResponses,
@@ -607,6 +613,12 @@ import type {
   GetSiteLoginBrandResponses,
   GetSiteLoginProtectionData,
   GetSiteLoginProtectionResponses,
+  GetSiteProvisioningCredentialsData,
+  GetSiteProvisioningCredentialsErrors,
+  GetSiteProvisioningCredentialsResponses,
+  GetSiteProvisioningData,
+  GetSiteProvisioningErrors,
+  GetSiteProvisioningResponses,
   GetSiteResponses,
   GetSiteSecurityPolicyData,
   GetSiteSecurityPolicyErrors,
@@ -1025,6 +1037,9 @@ import type {
   ResumeTenantAssistantData,
   ResumeTenantAssistantErrors,
   ResumeTenantAssistantResponses,
+  RetrySiteProvisioningData,
+  RetrySiteProvisioningErrors,
+  RetrySiteProvisioningResponses,
   RetryUpdateRunData,
   RetryUpdateRunErrors,
   RetryUpdateRunResponses,
@@ -1204,6 +1219,75 @@ export type Options<
    */
   meta?: Record<string, unknown>;
 };
+
+/**
+ * getProvisioningConfig
+ */
+export const getProvisioningConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<GetProvisioningConfigData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    GetProvisioningConfigResponses,
+    GetProvisioningConfigErrors,
+    ThrowOnError
+  >({ url: "/api/v1/provisioning/config", ...options });
+
+/**
+ * createProvisioning
+ */
+export const createProvisioning = <ThrowOnError extends boolean = false>(
+  options: Options<CreateProvisioningData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreateProvisioningResponses,
+    CreateProvisioningErrors,
+    ThrowOnError
+  >({
+    url: "/api/v1/provisioning",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * getSiteProvisioning
+ */
+export const getSiteProvisioning = <ThrowOnError extends boolean = false>(
+  options: Options<GetSiteProvisioningData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetSiteProvisioningResponses,
+    GetSiteProvisioningErrors,
+    ThrowOnError
+  >({ url: "/api/v1/sites/{siteId}/provisioning", ...options });
+
+/**
+ * retrySiteProvisioning
+ */
+export const retrySiteProvisioning = <ThrowOnError extends boolean = false>(
+  options: Options<RetrySiteProvisioningData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    RetrySiteProvisioningResponses,
+    RetrySiteProvisioningErrors,
+    ThrowOnError
+  >({ url: "/api/v1/sites/{siteId}/provisioning/retry", ...options });
+
+/**
+ * getSiteProvisioningCredentials
+ */
+export const getSiteProvisioningCredentials = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<GetSiteProvisioningCredentialsData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetSiteProvisioningCredentialsResponses,
+    GetSiteProvisioningCredentialsErrors,
+    ThrowOnError
+  >({ url: "/api/v1/sites/{siteId}/provisioning/credentials", ...options });
 
 /**
  * Liveness probe

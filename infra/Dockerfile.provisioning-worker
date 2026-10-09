@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+FROM --platform=$BUILDPLATFORM golang:1.26.6 AS build
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ENV CGO_ENABLED=0 GOWORK=off
+WORKDIR /src/apps/api
+COPY apps/api/go.mod apps/api/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY apps/api/ ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath \
+    -ldflags '-s -w' -o /out/provisioning-worker ./cmd/provisioning-worker
+
+# Docker and its Compose plugin are exclusive to the host provisioning worker.
+# Docker socket access is equivalent to host root, even with capability drops.
+FROM docker:28.3.3-cli
+COPY --from=build /out/provisioning-worker /usr/local/bin/provisioning-worker
+ENTRYPOINT ["/usr/local/bin/provisioning-worker"]

@@ -155,6 +155,7 @@ test("Add site walks URL → awaiting → connected live over SSE", async ({
 
   // Open the modal at step A (Enter URL).
   await page.getByRole("button", { name: "Add site" }).first().click();
+  await page.getByRole("button", { name: "Connect existing" }).click();
   const dialog = page.getByRole("dialog", { name: "Add site" });
   await expect(dialog).toBeVisible();
 
@@ -184,6 +185,7 @@ test("Add site validates the URL before continuing", async ({ page }) => {
 
   await page.goto("/sites");
   await page.getByRole("button", { name: "Add site" }).first().click();
+  await page.getByRole("button", { name: "Connect existing" }).click();
   const dialog = page.getByRole("dialog", { name: "Add site" });
   await expect(dialog).toBeVisible();
 

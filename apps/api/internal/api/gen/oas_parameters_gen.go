@@ -770,6 +770,16 @@ type GetSiteLoginProtectionParams struct {
 	SiteId uuid.UUID
 }
 
+// GetSiteProvisioningParams is parameters of getSiteProvisioning operation.
+type GetSiteProvisioningParams struct {
+	SiteId uuid.UUID
+}
+
+// GetSiteProvisioningCredentialsParams is parameters of getSiteProvisioningCredentials operation.
+type GetSiteProvisioningCredentialsParams struct {
+	SiteId uuid.UUID
+}
+
 // GetSiteSecurityPolicyParams is parameters of getSiteSecurityPolicy operation.
 type GetSiteSecurityPolicyParams struct {
 	SiteId uuid.UUID
@@ -1542,6 +1552,11 @@ type RestoreSiteVulnerabilityParams struct {
 // ResumeTenantAssistantParams is parameters of resumeTenantAssistant operation.
 type ResumeTenantAssistantParams struct {
 	TenantId uuid.UUID
+}
+
+// RetrySiteProvisioningParams is parameters of retrySiteProvisioning operation.
+type RetrySiteProvisioningParams struct {
+	SiteId uuid.UUID
 }
 
 // RetryUpdateRunParams is parameters of retryUpdateRun operation.

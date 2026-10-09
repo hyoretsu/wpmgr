@@ -50,6 +50,17 @@ const TAG_COLOR: Record<ChangeTag, string> = {
 
 const RELEASES: ChangeEntry[] = [
   {
+    version: "0.62.0",
+    date: "2026-10-09",
+    summary: "Create a new WordPress installation on the same Docker host from the dashboard.",
+    items: [
+      {
+        tag: "Added",
+        text: "Self-hosted operators can opt in to same-host provisioning. Owners of the configured host-operator organization can choose Create new WordPress alongside Connect existing. New installations run on the WPMgr Docker host, with dashboard progress, retry and administrator credential retrieval.",
+      },
+    ],
+  },
+  {
     version: "0.61.164",
     date: "2026-09-28",
     summary:

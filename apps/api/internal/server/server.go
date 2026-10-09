@@ -46,6 +46,7 @@ import (
 	"github.com/mosamlife/wpmgr/apps/api/internal/perf"
 	portalpkg "github.com/mosamlife/wpmgr/apps/api/internal/portal"
 	"github.com/mosamlife/wpmgr/apps/api/internal/pricing"
+	"github.com/mosamlife/wpmgr/apps/api/internal/provisioning"
 	reportpkg "github.com/mosamlife/wpmgr/apps/api/internal/report"
 	"github.com/mosamlife/wpmgr/apps/api/internal/rum"
 	"github.com/mosamlife/wpmgr/apps/api/internal/scan"
@@ -65,17 +66,18 @@ import (
 
 // Deps are the server's wired dependencies.
 type Deps struct {
-	Config   config.Config
-	Logger   *slog.Logger
-	Pool     *db.Pool
-	Sessions *auth.SessionManager
-	Auth     *middleware.Authenticator
-	AuthH    *auth.Handler
-	MembersH *auth.MembersHandler
-	APIKeyH  *apikey.Handler
-	AuditH   *audit.Handler
-	TenantH  *tenant.Handler
-	SiteH    *site.Handler
+	Config        config.Config
+	Logger        *slog.Logger
+	Pool          *db.Pool
+	Sessions      *auth.SessionManager
+	Auth          *middleware.Authenticator
+	AuthH         *auth.Handler
+	MembersH      *auth.MembersHandler
+	APIKeyH       *apikey.Handler
+	AuditH        *audit.Handler
+	TenantH       *tenant.Handler
+	SiteH         *site.Handler
+	ProvisioningH *provisioning.Handler
 	// SiteEventsH serves the M21 tenant-scoped connection-lifecycle SSE stream at
 	// GET /api/v1/sites/events (ADR-038). nil ⇒ the route is not mounted.
 	SiteEventsH  *siteevents.Handler
@@ -677,6 +679,9 @@ func New(deps Deps) *Server {
 		// that authority and belongs to no organisation. The settings group
 		// carries its own RequireOrgScope and instance-authority gate.
 		deps.SettingsH.Register(v1Auth)
+	}
+	if deps.ProvisioningH != nil {
+		deps.ProvisioningH.Register(v1)
 	}
 	if deps.UpdateH != nil {
 		deps.UpdateH.Register(v1)

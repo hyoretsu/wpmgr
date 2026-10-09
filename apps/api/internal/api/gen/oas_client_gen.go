@@ -925,6 +925,12 @@ type Invoker interface {
 	//
 	// POST /api/v1/sites/pairing-codes
 	CreatePairingCode(ctx context.Context, request OptPairingCodeCreate) (CreatePairingCodeRes, error)
+	// CreateProvisioning invokes createProvisioning operation.
+	//
+	// CreateProvisioning.
+	//
+	// POST /api/v1/provisioning
+	CreateProvisioning(ctx context.Context, request *CreateProvisioning) (CreateProvisioningRes, error)
 	// CreateRestore invokes createRestore operation.
 	//
 	// Enqueues a restore job. The control plane resolves the (possibly partial) selection into ordered
@@ -1847,6 +1853,12 @@ type Invoker interface {
 	//
 	// GET /api/v1/portal/summary
 	GetPortalSummary(ctx context.Context, params GetPortalSummaryParams) (GetPortalSummaryRes, error)
+	// GetProvisioningConfig invokes getProvisioningConfig operation.
+	//
+	// GetProvisioningConfig.
+	//
+	// GET /api/v1/provisioning/config
+	GetProvisioningConfig(ctx context.Context) (GetProvisioningConfigRes, error)
 	// GetPublicPricing invokes getPublicPricing operation.
 	//
 	// Mounted directly on the root engine (no session, no tenant gate) despite sharing the `/api/v1` path
@@ -2083,6 +2095,18 @@ type Invoker interface {
 	//
 	// GET /api/v1/sites/{siteId}/security/login-protection
 	GetSiteLoginProtection(ctx context.Context, params GetSiteLoginProtectionParams) (*SiteLoginProtectionConfig, error)
+	// GetSiteProvisioning invokes getSiteProvisioning operation.
+	//
+	// GetSiteProvisioning.
+	//
+	// GET /api/v1/sites/{siteId}/provisioning
+	GetSiteProvisioning(ctx context.Context, params GetSiteProvisioningParams) (GetSiteProvisioningRes, error)
+	// GetSiteProvisioningCredentials invokes getSiteProvisioningCredentials operation.
+	//
+	// GetSiteProvisioningCredentials.
+	//
+	// GET /api/v1/sites/{siteId}/provisioning/credentials
+	GetSiteProvisioningCredentials(ctx context.Context, params GetSiteProvisioningCredentialsParams) (GetSiteProvisioningCredentialsRes, error)
 	// GetSiteSecurityPolicy invokes getSiteSecurityPolicy operation.
 	//
 	// Site-user auth policy governs 2FA and password requirements for the WordPress users of this site
@@ -3428,6 +3452,12 @@ type Invoker interface {
 	//
 	// POST /api/v1/tenants/{tenantId}/assistant/resume
 	ResumeTenantAssistant(ctx context.Context, params ResumeTenantAssistantParams) (ResumeTenantAssistantRes, error)
+	// RetrySiteProvisioning invokes retrySiteProvisioning operation.
+	//
+	// RetrySiteProvisioning.
+	//
+	// POST /api/v1/sites/{siteId}/provisioning/retry
+	RetrySiteProvisioning(ctx context.Context, params RetrySiteProvisioningParams) (RetrySiteProvisioningRes, error)
 	// RetryUpdateRun invokes retryUpdateRun operation.
 	//
 	// Creates a NEW update run repeating the named tasks of an existing one. The source run is never
@@ -12140,6 +12170,89 @@ func (c *Client) sendCreatePairingCode(ctx context.Context, request OptPairingCo
 
 	stage = "DecodeResponse"
 	result, err := decodeCreatePairingCodeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateProvisioning invokes createProvisioning operation.
+//
+// CreateProvisioning.
+//
+// POST /api/v1/provisioning
+func (c *Client) CreateProvisioning(ctx context.Context, request *CreateProvisioning) (CreateProvisioningRes, error) {
+	res, err := c.sendCreateProvisioning(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateProvisioning(ctx context.Context, request *CreateProvisioning) (res CreateProvisioningRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createProvisioning"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/api/v1/provisioning"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateProvisioningOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/v1/provisioning"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateProvisioningRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateProvisioningResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -23364,6 +23477,86 @@ func (c *Client) sendGetPortalSummary(ctx context.Context, params GetPortalSumma
 	return result, nil
 }
 
+// GetProvisioningConfig invokes getProvisioningConfig operation.
+//
+// GetProvisioningConfig.
+//
+// GET /api/v1/provisioning/config
+func (c *Client) GetProvisioningConfig(ctx context.Context) (GetProvisioningConfigRes, error) {
+	res, err := c.sendGetProvisioningConfig(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetProvisioningConfig(ctx context.Context) (res GetProvisioningConfigRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getProvisioningConfig"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/v1/provisioning/config"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetProvisioningConfigOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/v1/provisioning/config"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetProvisioningConfigResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetPublicPricing invokes getPublicPricing operation.
 //
 // Mounted directly on the root engine (no session, no tenant gate) despite sharing the `/api/v1` path
@@ -26194,6 +26387,204 @@ func (c *Client) sendGetSiteLoginProtection(ctx context.Context, params GetSiteL
 
 	stage = "DecodeResponse"
 	result, err := decodeGetSiteLoginProtectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetSiteProvisioning invokes getSiteProvisioning operation.
+//
+// GetSiteProvisioning.
+//
+// GET /api/v1/sites/{siteId}/provisioning
+func (c *Client) GetSiteProvisioning(ctx context.Context, params GetSiteProvisioningParams) (GetSiteProvisioningRes, error) {
+	res, err := c.sendGetSiteProvisioning(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetSiteProvisioning(ctx context.Context, params GetSiteProvisioningParams) (res GetSiteProvisioningRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSiteProvisioning"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/v1/sites/{siteId}/provisioning"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSiteProvisioningOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/api/v1/sites/"
+	{
+		// Encode "siteId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "siteId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.SiteId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/provisioning"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSiteProvisioningResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetSiteProvisioningCredentials invokes getSiteProvisioningCredentials operation.
+//
+// GetSiteProvisioningCredentials.
+//
+// GET /api/v1/sites/{siteId}/provisioning/credentials
+func (c *Client) GetSiteProvisioningCredentials(ctx context.Context, params GetSiteProvisioningCredentialsParams) (GetSiteProvisioningCredentialsRes, error) {
+	res, err := c.sendGetSiteProvisioningCredentials(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetSiteProvisioningCredentials(ctx context.Context, params GetSiteProvisioningCredentialsParams) (res GetSiteProvisioningCredentialsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSiteProvisioningCredentials"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/v1/sites/{siteId}/provisioning/credentials"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSiteProvisioningCredentialsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/api/v1/sites/"
+	{
+		// Encode "siteId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "siteId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.SiteId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/provisioning/credentials"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSiteProvisioningCredentialsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -42931,6 +43322,105 @@ func (c *Client) sendResumeTenantAssistant(ctx context.Context, params ResumeTen
 
 	stage = "DecodeResponse"
 	result, err := decodeResumeTenantAssistantResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RetrySiteProvisioning invokes retrySiteProvisioning operation.
+//
+// RetrySiteProvisioning.
+//
+// POST /api/v1/sites/{siteId}/provisioning/retry
+func (c *Client) RetrySiteProvisioning(ctx context.Context, params RetrySiteProvisioningParams) (RetrySiteProvisioningRes, error) {
+	res, err := c.sendRetrySiteProvisioning(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendRetrySiteProvisioning(ctx context.Context, params RetrySiteProvisioningParams) (res RetrySiteProvisioningRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("retrySiteProvisioning"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/api/v1/sites/{siteId}/provisioning/retry"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RetrySiteProvisioningOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/api/v1/sites/"
+	{
+		// Encode "siteId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "siteId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.SiteId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/provisioning/retry"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeRetrySiteProvisioningResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -74,6 +74,8 @@ export interface AddSiteDialogProps {
    */
   open?: boolean;
   onClose?: () => void;
+  /** Return to the per-site setup choice before creating resources. */
+  onBack?: () => void;
   /**
    * Pre-bind an existing site and open at step B (reconnect). The code/expiry
    * come from a fresh POST /sites/:id/enrollment-codes the caller already made.
@@ -106,6 +108,7 @@ export function AddSiteDialog({
   onClose: controlledOnClose,
   initialSite,
   initialUrl,
+  onBack,
 }: AddSiteDialogProps = {}) {
   const isControlled = controlledOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -146,6 +149,7 @@ export function AddSiteDialog({
             onLimitReached={handleLimitReached}
             initialSite={initialSite}
             initialUrl={initialUrl}
+            onBack={onBack}
           />
         ) : null}
       </Dialog>
@@ -168,11 +172,13 @@ function AddSiteFlow({
   onLimitReached,
   initialSite,
   initialUrl,
+  onBack,
 }: {
   onClose: () => void;
   onLimitReached: (err: SiteLimitReachedError) => void;
   initialSite?: AddSiteDialogProps["initialSite"];
   initialUrl?: string;
+  onBack?: () => void;
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(initialSite ? "awaiting" : "url");
@@ -266,6 +272,7 @@ function AddSiteFlow({
             <UrlStep
               onCreated={handleCreated}
               onCancel={onClose}
+              onBack={onBack}
               onReconnectExisting={handleReconnectExisting}
               onLimitReached={onLimitReached}
               initialUrl={initialUrl}
@@ -316,12 +323,14 @@ function AddSiteFlow({
 // ---------------------------------------------------------------------------
 
 function UrlStep({
+  onBack,
   onCreated,
   onCancel,
   onReconnectExisting,
   onLimitReached,
   initialUrl,
 }: {
+  onBack?: () => void;
   onCreated: (site: PendingSite) => void;
   onCancel: () => void;
   onReconnectExisting: (siteId: string, url: string) => void;
@@ -449,6 +458,7 @@ function UrlStep({
       </DialogBody>
 
       <DialogFooter className="pt-2">
+        {onBack ? <Button type="button" variant="outline" className="cursor-pointer" onClick={onBack} disabled={create.isPending}>Back to setup choices</Button> : null}
         <Button
           type="button"
           variant="outline"

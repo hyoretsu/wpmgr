@@ -4,6 +4,45 @@ export type ClientOptions = {
   baseUrl: "https://manage.wpmgr.app" | "http://localhost:8080" | (string & {});
 };
 
+export type ProvisioningConfig = {
+  enabled: boolean;
+};
+
+export type CreateProvisioning = {
+  domain: string;
+  title?: string;
+  admin_username: string;
+  admin_email: string;
+};
+
+export type ProvisioningRecord = {
+  id: string;
+  site_id: string;
+  domain: string;
+  title: string;
+  admin_username: string;
+  admin_email: string;
+  status: "queued" | "running" | "failed" | "complete";
+  step:
+    | "queued"
+    | "database"
+    | "volume"
+    | "wordpress"
+    | "install"
+    | "agent"
+    | "https"
+    | "complete";
+  error_code?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProvisioningCredentials = {
+  admin_username: string;
+  admin_password: string;
+  login_url: string;
+};
+
 export type Health = {
   status: "ok";
   version?: string;
@@ -9548,6 +9587,147 @@ export type UserId = string;
 export type OrgId = string;
 
 export type VersionId = string;
+
+export type GetProvisioningConfigData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/provisioning/config";
+};
+
+export type GetProvisioningConfigErrors = {
+  /**
+   * Request refused or provisioning unavailable
+   */
+  default: Error;
+};
+
+export type GetProvisioningConfigError =
+  GetProvisioningConfigErrors[keyof GetProvisioningConfigErrors];
+
+export type GetProvisioningConfigResponses = {
+  /**
+   * Provisioning response
+   */
+  200: ProvisioningConfig;
+};
+
+export type GetProvisioningConfigResponse =
+  GetProvisioningConfigResponses[keyof GetProvisioningConfigResponses];
+
+export type CreateProvisioningData = {
+  body: CreateProvisioning;
+  path?: never;
+  query?: never;
+  url: "/api/v1/provisioning";
+};
+
+export type CreateProvisioningErrors = {
+  /**
+   * Request refused or provisioning unavailable
+   */
+  default: Error;
+};
+
+export type CreateProvisioningError =
+  CreateProvisioningErrors[keyof CreateProvisioningErrors];
+
+export type CreateProvisioningResponses = {
+  /**
+   * Provisioning response
+   */
+  202: ProvisioningRecord;
+};
+
+export type CreateProvisioningResponse =
+  CreateProvisioningResponses[keyof CreateProvisioningResponses];
+
+export type GetSiteProvisioningData = {
+  body?: never;
+  path: {
+    siteId: string;
+  };
+  query?: never;
+  url: "/api/v1/sites/{siteId}/provisioning";
+};
+
+export type GetSiteProvisioningErrors = {
+  /**
+   * Request refused or provisioning unavailable
+   */
+  default: Error;
+};
+
+export type GetSiteProvisioningError =
+  GetSiteProvisioningErrors[keyof GetSiteProvisioningErrors];
+
+export type GetSiteProvisioningResponses = {
+  /**
+   * Provisioning response
+   */
+  200: ProvisioningRecord;
+};
+
+export type GetSiteProvisioningResponse =
+  GetSiteProvisioningResponses[keyof GetSiteProvisioningResponses];
+
+export type RetrySiteProvisioningData = {
+  body?: never;
+  path: {
+    siteId: string;
+  };
+  query?: never;
+  url: "/api/v1/sites/{siteId}/provisioning/retry";
+};
+
+export type RetrySiteProvisioningErrors = {
+  /**
+   * Request refused or provisioning unavailable
+   */
+  default: Error;
+};
+
+export type RetrySiteProvisioningError =
+  RetrySiteProvisioningErrors[keyof RetrySiteProvisioningErrors];
+
+export type RetrySiteProvisioningResponses = {
+  /**
+   * Provisioning response
+   */
+  202: ProvisioningRecord;
+};
+
+export type RetrySiteProvisioningResponse =
+  RetrySiteProvisioningResponses[keyof RetrySiteProvisioningResponses];
+
+export type GetSiteProvisioningCredentialsData = {
+  body?: never;
+  path: {
+    siteId: string;
+  };
+  query?: never;
+  url: "/api/v1/sites/{siteId}/provisioning/credentials";
+};
+
+export type GetSiteProvisioningCredentialsErrors = {
+  /**
+   * Request refused or provisioning unavailable
+   */
+  default: Error;
+};
+
+export type GetSiteProvisioningCredentialsError =
+  GetSiteProvisioningCredentialsErrors[keyof GetSiteProvisioningCredentialsErrors];
+
+export type GetSiteProvisioningCredentialsResponses = {
+  /**
+   * Provisioning response
+   */
+  200: ProvisioningCredentials;
+};
+
+export type GetSiteProvisioningCredentialsResponse =
+  GetSiteProvisioningCredentialsResponses[keyof GetSiteProvisioningCredentialsResponses];
 
 export type GetHealthzData = {
   body?: never;

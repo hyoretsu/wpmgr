@@ -19193,6 +19193,54 @@ type CreateOrgUnprocessableEntity Error
 
 func (*CreateOrgUnprocessableEntity) createOrgRes() {}
 
+// Ref: #/components/schemas/CreateProvisioning
+type CreateProvisioning struct {
+	Domain        string    `json:"domain"`
+	Title         OptString `json:"title"`
+	AdminUsername string    `json:"admin_username"`
+	AdminEmail    string    `json:"admin_email"`
+}
+
+// GetDomain returns the value of Domain.
+func (s *CreateProvisioning) GetDomain() string {
+	return s.Domain
+}
+
+// GetTitle returns the value of Title.
+func (s *CreateProvisioning) GetTitle() OptString {
+	return s.Title
+}
+
+// GetAdminUsername returns the value of AdminUsername.
+func (s *CreateProvisioning) GetAdminUsername() string {
+	return s.AdminUsername
+}
+
+// GetAdminEmail returns the value of AdminEmail.
+func (s *CreateProvisioning) GetAdminEmail() string {
+	return s.AdminEmail
+}
+
+// SetDomain sets the value of Domain.
+func (s *CreateProvisioning) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetTitle sets the value of Title.
+func (s *CreateProvisioning) SetTitle(val OptString) {
+	s.Title = val
+}
+
+// SetAdminUsername sets the value of AdminUsername.
+func (s *CreateProvisioning) SetAdminUsername(val string) {
+	s.AdminUsername = val
+}
+
+// SetAdminEmail sets the value of AdminEmail.
+func (s *CreateProvisioning) SetAdminEmail(val string) {
+	s.AdminEmail = val
+}
+
 // Merged schema.
 type CreateRestoreAccepted struct {
 	ID        uuid.UUID                   `json:"id"`
@@ -23559,6 +23607,38 @@ func (s *ErrorHeaders) SetResponse(val Error) {
 
 func (*ErrorHeaders) checkAgentMirrorNowRes() {}
 func (*ErrorHeaders) loginRes()               {}
+
+// ErrorStatusCode wraps Error with StatusCode.
+type ErrorStatusCode struct {
+	StatusCode int
+	Response   Error
+}
+
+// GetStatusCode returns the value of StatusCode.
+func (s *ErrorStatusCode) GetStatusCode() int {
+	return s.StatusCode
+}
+
+// GetResponse returns the value of Response.
+func (s *ErrorStatusCode) GetResponse() Error {
+	return s.Response
+}
+
+// SetStatusCode sets the value of StatusCode.
+func (s *ErrorStatusCode) SetStatusCode(val int) {
+	s.StatusCode = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ErrorStatusCode) SetResponse(val Error) {
+	s.Response = val
+}
+
+func (*ErrorStatusCode) createProvisioningRes()             {}
+func (*ErrorStatusCode) getProvisioningConfigRes()          {}
+func (*ErrorStatusCode) getSiteProvisioningCredentialsRes() {}
+func (*ErrorStatusCode) getSiteProvisioningRes()            {}
+func (*ErrorStatusCode) retrySiteProvisioningRes()          {}
 
 type ExportSiteEmailLogForbidden Error
 
@@ -47921,6 +48001,329 @@ func (s *PrincipalRole) UnmarshalText(data []byte) error {
 		return nil
 	case PrincipalRoleEmpty:
 		*s = PrincipalRoleEmpty
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ProvisioningConfig
+type ProvisioningConfig struct {
+	Enabled bool `json:"enabled"`
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *ProvisioningConfig) GetEnabled() bool {
+	return s.Enabled
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *ProvisioningConfig) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+func (*ProvisioningConfig) getProvisioningConfigRes() {}
+
+// Ref: #/components/schemas/ProvisioningCredentials
+type ProvisioningCredentials struct {
+	AdminUsername string `json:"admin_username"`
+	AdminPassword string `json:"admin_password"`
+	LoginURL      string `json:"login_url"`
+}
+
+// GetAdminUsername returns the value of AdminUsername.
+func (s *ProvisioningCredentials) GetAdminUsername() string {
+	return s.AdminUsername
+}
+
+// GetAdminPassword returns the value of AdminPassword.
+func (s *ProvisioningCredentials) GetAdminPassword() string {
+	return s.AdminPassword
+}
+
+// GetLoginURL returns the value of LoginURL.
+func (s *ProvisioningCredentials) GetLoginURL() string {
+	return s.LoginURL
+}
+
+// SetAdminUsername sets the value of AdminUsername.
+func (s *ProvisioningCredentials) SetAdminUsername(val string) {
+	s.AdminUsername = val
+}
+
+// SetAdminPassword sets the value of AdminPassword.
+func (s *ProvisioningCredentials) SetAdminPassword(val string) {
+	s.AdminPassword = val
+}
+
+// SetLoginURL sets the value of LoginURL.
+func (s *ProvisioningCredentials) SetLoginURL(val string) {
+	s.LoginURL = val
+}
+
+func (*ProvisioningCredentials) getSiteProvisioningCredentialsRes() {}
+
+// Ref: #/components/schemas/ProvisioningRecord
+type ProvisioningRecord struct {
+	ID            uuid.UUID                `json:"id"`
+	SiteID        uuid.UUID                `json:"site_id"`
+	Domain        string                   `json:"domain"`
+	Title         string                   `json:"title"`
+	AdminUsername string                   `json:"admin_username"`
+	AdminEmail    string                   `json:"admin_email"`
+	Status        ProvisioningRecordStatus `json:"status"`
+	Step          ProvisioningRecordStep   `json:"step"`
+	ErrorCode     OptString                `json:"error_code"`
+	CreatedAt     time.Time                `json:"created_at"`
+	UpdatedAt     time.Time                `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *ProvisioningRecord) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSiteID returns the value of SiteID.
+func (s *ProvisioningRecord) GetSiteID() uuid.UUID {
+	return s.SiteID
+}
+
+// GetDomain returns the value of Domain.
+func (s *ProvisioningRecord) GetDomain() string {
+	return s.Domain
+}
+
+// GetTitle returns the value of Title.
+func (s *ProvisioningRecord) GetTitle() string {
+	return s.Title
+}
+
+// GetAdminUsername returns the value of AdminUsername.
+func (s *ProvisioningRecord) GetAdminUsername() string {
+	return s.AdminUsername
+}
+
+// GetAdminEmail returns the value of AdminEmail.
+func (s *ProvisioningRecord) GetAdminEmail() string {
+	return s.AdminEmail
+}
+
+// GetStatus returns the value of Status.
+func (s *ProvisioningRecord) GetStatus() ProvisioningRecordStatus {
+	return s.Status
+}
+
+// GetStep returns the value of Step.
+func (s *ProvisioningRecord) GetStep() ProvisioningRecordStep {
+	return s.Step
+}
+
+// GetErrorCode returns the value of ErrorCode.
+func (s *ProvisioningRecord) GetErrorCode() OptString {
+	return s.ErrorCode
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ProvisioningRecord) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *ProvisioningRecord) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *ProvisioningRecord) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSiteID sets the value of SiteID.
+func (s *ProvisioningRecord) SetSiteID(val uuid.UUID) {
+	s.SiteID = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *ProvisioningRecord) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetTitle sets the value of Title.
+func (s *ProvisioningRecord) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetAdminUsername sets the value of AdminUsername.
+func (s *ProvisioningRecord) SetAdminUsername(val string) {
+	s.AdminUsername = val
+}
+
+// SetAdminEmail sets the value of AdminEmail.
+func (s *ProvisioningRecord) SetAdminEmail(val string) {
+	s.AdminEmail = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ProvisioningRecord) SetStatus(val ProvisioningRecordStatus) {
+	s.Status = val
+}
+
+// SetStep sets the value of Step.
+func (s *ProvisioningRecord) SetStep(val ProvisioningRecordStep) {
+	s.Step = val
+}
+
+// SetErrorCode sets the value of ErrorCode.
+func (s *ProvisioningRecord) SetErrorCode(val OptString) {
+	s.ErrorCode = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ProvisioningRecord) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *ProvisioningRecord) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+func (*ProvisioningRecord) createProvisioningRes()    {}
+func (*ProvisioningRecord) getSiteProvisioningRes()   {}
+func (*ProvisioningRecord) retrySiteProvisioningRes() {}
+
+type ProvisioningRecordStatus string
+
+const (
+	ProvisioningRecordStatusQueued   ProvisioningRecordStatus = "queued"
+	ProvisioningRecordStatusRunning  ProvisioningRecordStatus = "running"
+	ProvisioningRecordStatusFailed   ProvisioningRecordStatus = "failed"
+	ProvisioningRecordStatusComplete ProvisioningRecordStatus = "complete"
+)
+
+// AllValues returns all ProvisioningRecordStatus values.
+func (ProvisioningRecordStatus) AllValues() []ProvisioningRecordStatus {
+	return []ProvisioningRecordStatus{
+		ProvisioningRecordStatusQueued,
+		ProvisioningRecordStatusRunning,
+		ProvisioningRecordStatusFailed,
+		ProvisioningRecordStatusComplete,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProvisioningRecordStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case ProvisioningRecordStatusQueued:
+		return []byte(s), nil
+	case ProvisioningRecordStatusRunning:
+		return []byte(s), nil
+	case ProvisioningRecordStatusFailed:
+		return []byte(s), nil
+	case ProvisioningRecordStatusComplete:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProvisioningRecordStatus) UnmarshalText(data []byte) error {
+	switch ProvisioningRecordStatus(data) {
+	case ProvisioningRecordStatusQueued:
+		*s = ProvisioningRecordStatusQueued
+		return nil
+	case ProvisioningRecordStatusRunning:
+		*s = ProvisioningRecordStatusRunning
+		return nil
+	case ProvisioningRecordStatusFailed:
+		*s = ProvisioningRecordStatusFailed
+		return nil
+	case ProvisioningRecordStatusComplete:
+		*s = ProvisioningRecordStatusComplete
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ProvisioningRecordStep string
+
+const (
+	ProvisioningRecordStepQueued    ProvisioningRecordStep = "queued"
+	ProvisioningRecordStepDatabase  ProvisioningRecordStep = "database"
+	ProvisioningRecordStepVolume    ProvisioningRecordStep = "volume"
+	ProvisioningRecordStepWordpress ProvisioningRecordStep = "wordpress"
+	ProvisioningRecordStepInstall   ProvisioningRecordStep = "install"
+	ProvisioningRecordStepAgent     ProvisioningRecordStep = "agent"
+	ProvisioningRecordStepHTTPS     ProvisioningRecordStep = "https"
+	ProvisioningRecordStepComplete  ProvisioningRecordStep = "complete"
+)
+
+// AllValues returns all ProvisioningRecordStep values.
+func (ProvisioningRecordStep) AllValues() []ProvisioningRecordStep {
+	return []ProvisioningRecordStep{
+		ProvisioningRecordStepQueued,
+		ProvisioningRecordStepDatabase,
+		ProvisioningRecordStepVolume,
+		ProvisioningRecordStepWordpress,
+		ProvisioningRecordStepInstall,
+		ProvisioningRecordStepAgent,
+		ProvisioningRecordStepHTTPS,
+		ProvisioningRecordStepComplete,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProvisioningRecordStep) MarshalText() ([]byte, error) {
+	switch s {
+	case ProvisioningRecordStepQueued:
+		return []byte(s), nil
+	case ProvisioningRecordStepDatabase:
+		return []byte(s), nil
+	case ProvisioningRecordStepVolume:
+		return []byte(s), nil
+	case ProvisioningRecordStepWordpress:
+		return []byte(s), nil
+	case ProvisioningRecordStepInstall:
+		return []byte(s), nil
+	case ProvisioningRecordStepAgent:
+		return []byte(s), nil
+	case ProvisioningRecordStepHTTPS:
+		return []byte(s), nil
+	case ProvisioningRecordStepComplete:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProvisioningRecordStep) UnmarshalText(data []byte) error {
+	switch ProvisioningRecordStep(data) {
+	case ProvisioningRecordStepQueued:
+		*s = ProvisioningRecordStepQueued
+		return nil
+	case ProvisioningRecordStepDatabase:
+		*s = ProvisioningRecordStepDatabase
+		return nil
+	case ProvisioningRecordStepVolume:
+		*s = ProvisioningRecordStepVolume
+		return nil
+	case ProvisioningRecordStepWordpress:
+		*s = ProvisioningRecordStepWordpress
+		return nil
+	case ProvisioningRecordStepInstall:
+		*s = ProvisioningRecordStepInstall
+		return nil
+	case ProvisioningRecordStepAgent:
+		*s = ProvisioningRecordStepAgent
+		return nil
+	case ProvisioningRecordStepHTTPS:
+		*s = ProvisioningRecordStepHTTPS
+		return nil
+	case ProvisioningRecordStepComplete:
+		*s = ProvisioningRecordStepComplete
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

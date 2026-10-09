@@ -182,3 +182,22 @@ describe("AddSiteDialog — 402 site_limit_reached swaps to UpgradePrompt", () =
     ).toBeInTheDocument();
   });
 });
+
+
+describe("per-site choice back navigation", () => {
+  it("blocks Back while managed creation is pending", () => {
+    mockedUseCreateSiteFirst.mockReturnValue(mockMutationResult<CreateSiteResult, CreateSiteInput>({ isPending: true }));
+    const back = vi.fn();
+    renderWithProviders(<AddSiteDialog open onBack={back} />);
+    const button = screen.getByRole("button", { name: "Back to setup choices" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(back).not.toHaveBeenCalled();
+  });
+  it("returns to choices before managed creation starts", () => {
+    const back = vi.fn();
+    renderWithProviders(<AddSiteDialog open onBack={back} />);
+    fireEvent.click(screen.getByRole("button", { name: "Back to setup choices" }));
+    expect(back).toHaveBeenCalledOnce();
+  });
+});
