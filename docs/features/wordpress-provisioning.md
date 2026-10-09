@@ -81,7 +81,7 @@ that saved configuration rather than adopting subsequent environment edits.
 
 Start with **Add site** and choose the path for that site:
 
-- **Connect existing WordPress** connects a site already running on its current
+- **Connect existing** connects a site already running on its current
   host through Fleet Agent. It does not create or move hosting resources.
 - **Create new WordPress** provisions a new installation on this Docker host.
   This choice is available only when provisioning is enabled and the signed-in

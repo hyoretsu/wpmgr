@@ -22,4 +22,4 @@ Security review performed on committed ranges. Resource ownership and interrupte
 
 ## Per-site choice follow-up
 
-Host opt-in enables provisioning as an optional capability. The Add site flow offers connecting existing WordPress or creating new WordPress for each site. Both paths share the dashboard; existing sites retain their hosting and connection behavior. Operator documentation updated; dashboard implementation and verification tracked with this follow-up.
+Host opt-in enables provisioning as an optional capability. The Add site flow offers connecting existing WordPress or creating new WordPress for each site. Both paths share the dashboard; existing sites retain their hosting and connection behavior. Operator documentation and dashboard choice implemented with the approved labels **Connect existing** and **Create new WordPress**. Review correction preserves pending existing-site creation when switching setup choices. Regression coverage exercises the setup chooser, existing-site enrollment, provisioning availability, and mixed fleets. Final local checks remain pending.
