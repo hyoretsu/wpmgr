@@ -25,6 +25,12 @@ House rules: no em dashes, no en dashes, no competitor names. Use "to" for range
 - The agent can now carry out a cache purge limited to the site's own page cache, skipping hosting and CDN cache integrations, and report which integrations ran, when the control plane requests it with an origin-only option. The control plane does not send that option yet, so dashboard purges are unchanged until it does. Under the option, a hosting or edge cache integration runs only when its declared reach is this install; the others are skipped, and the result reports what each detected integration did (purged_all, purged_urls, purged_urls_exact or skipped_reach_unconfirmed). Without the option the command behaves as before. A per-page purge also now keeps a non-default port in the cache bucket host, the way the cache writer does (#795). Agent 0.61.153.
 - The agent now checks whether each key it has stored still opens under the site's current encryption key. When some do not, WordPress admin shows a notice naming which keys cannot be read and what to do about it. When the backup key cannot be used, a backup is refused with a clear keystore_unreadable explanation instead of failing later. Status is reported to the dashboard with the agent's metadata, and a missing backup key is created only while the site's own key pair still opens, or on a site with no stored keys yet (#753). Agent 0.61.152.
 
+## [0.62.0] - 2026-10-09
+
+### Added
+
+- Opt-in WordPress provisioning for self-hosted installations. **Create new WordPress** creates a site on the configured Docker host, with progress, retry controls and administrator credential retrieval, alongside **Connect existing** in the same dashboard. Requires host configuration and existing infrastructure, including DNS.
+
 ## [0.61.164] - 2026-09-28
 
 ### Fixed
