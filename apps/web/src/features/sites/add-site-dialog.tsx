@@ -74,6 +74,8 @@ export interface AddSiteDialogProps {
    */
   open?: boolean;
   onClose?: () => void;
+  /** Return to the per-site setup choice before creating resources. */
+  onBack?: () => void;
   /**
    * Pre-bind an existing site and open at step B (reconnect). The code/expiry
    * come from a fresh POST /sites/:id/enrollment-codes the caller already made.
@@ -106,6 +108,7 @@ export function AddSiteDialog({
   onClose: controlledOnClose,
   initialSite,
   initialUrl,
+  onBack,
 }: AddSiteDialogProps = {}) {
   const isControlled = controlledOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -146,6 +149,7 @@ export function AddSiteDialog({
             onLimitReached={handleLimitReached}
             initialSite={initialSite}
             initialUrl={initialUrl}
+            onBack={onBack}
           />
         ) : null}
       </Dialog>
@@ -168,11 +172,13 @@ function AddSiteFlow({
   onLimitReached,
   initialSite,
   initialUrl,
+  onBack,
 }: {
   onClose: () => void;
   onLimitReached: (err: SiteLimitReachedError) => void;
   initialSite?: AddSiteDialogProps["initialSite"];
   initialUrl?: string;
+  onBack?: () => void;
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(initialSite ? "awaiting" : "url");
@@ -241,6 +247,7 @@ function AddSiteFlow({
   return (
     <DialogContent ariaLabelledBy="add-site-title">
       <DialogHeader>
+        {step === "url" && onBack ? <Button type="button" variant="outline" className="w-fit cursor-pointer" onClick={onBack}>Back to setup choices</Button> : null}
         <DialogTitle id="add-site-title">
           {step === "success" ? "Site connected" : "Add site"}
         </DialogTitle>

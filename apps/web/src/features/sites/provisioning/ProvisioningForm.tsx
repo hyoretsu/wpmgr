@@ -5,8 +5,8 @@ import { DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { ProvisioningField } from "./ProvisioningField";
 import { provisioningFormSchema, type ProvisioningFormValues } from "./form-schema";
 
-interface Props { onSubmit: (values: ProvisioningFormValues) => void; onClose: () => void; pending: boolean; error?: string; }
-export function ProvisioningForm({ onSubmit, onClose, pending, error }: Props) {
+interface Props { onSubmit: (values: ProvisioningFormValues) => void; onClose: () => void; pending: boolean; error?: string; onBack?: () => void; }
+export function ProvisioningForm({ onSubmit, onClose, pending, error, onBack }: Props) {
   const form = useForm<ProvisioningFormValues>({ resolver: zodResolver(provisioningFormSchema), defaultValues: { domain: "", title: "", admin_username: "", admin_email: "" } });
   return <form noValidate onSubmit={event => {
       const fields = new FormData(event.currentTarget);
@@ -26,7 +26,8 @@ export function ProvisioningForm({ onSubmit, onClose, pending, error }: Props) {
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
     </DialogBody>
     <DialogFooter>
-      <Button type="button" variant="outline" className="cursor-pointer" onClick={onClose}>Cancel</Button>
+      {onBack ? <Button type="button" variant="outline" className="cursor-pointer" disabled={pending} onClick={onBack}>Back to setup choices</Button> : null}
+      <Button type="button" variant="outline" className="cursor-pointer" disabled={pending} onClick={onClose}>Cancel</Button>
       <Button type="submit" className="cursor-pointer" disabled={pending}>{pending ? "Starting provisioning..." : "Provision WordPress"}</Button>
     </DialogFooter>
   </form>;
