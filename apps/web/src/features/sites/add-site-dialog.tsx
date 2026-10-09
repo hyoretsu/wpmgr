@@ -247,7 +247,6 @@ function AddSiteFlow({
   return (
     <DialogContent ariaLabelledBy="add-site-title">
       <DialogHeader>
-        {step === "url" && onBack ? <Button type="button" variant="outline" className="w-fit cursor-pointer" onClick={onBack}>Back to setup choices</Button> : null}
         <DialogTitle id="add-site-title">
           {step === "success" ? "Site connected" : "Add site"}
         </DialogTitle>
@@ -273,6 +272,7 @@ function AddSiteFlow({
             <UrlStep
               onCreated={handleCreated}
               onCancel={onClose}
+              onBack={onBack}
               onReconnectExisting={handleReconnectExisting}
               onLimitReached={onLimitReached}
               initialUrl={initialUrl}
@@ -323,12 +323,14 @@ function AddSiteFlow({
 // ---------------------------------------------------------------------------
 
 function UrlStep({
+  onBack,
   onCreated,
   onCancel,
   onReconnectExisting,
   onLimitReached,
   initialUrl,
 }: {
+  onBack?: () => void;
   onCreated: (site: PendingSite) => void;
   onCancel: () => void;
   onReconnectExisting: (siteId: string, url: string) => void;
@@ -456,6 +458,7 @@ function UrlStep({
       </DialogBody>
 
       <DialogFooter className="pt-2">
+        {onBack ? <Button type="button" variant="outline" className="cursor-pointer" onClick={onBack} disabled={create.isPending}>Back to setup choices</Button> : null}
         <Button
           type="button"
           variant="outline"
