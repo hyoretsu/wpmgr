@@ -1,6 +1,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
+import type { ProvisioningConfig } from "@wpmgr/api";
 import { mockQueryResult } from "@/test/query-mocks";
 import { useMe } from "@/features/auth/use-auth";
 import { useProvisioningConfig } from "../provisioning/use-provisioning";
@@ -30,7 +31,7 @@ describe("per-site setup choice", () => {
     expect(screen.getByRole("button", { name: "Connect existing site" })).toBeEnabled();
   });
   it.each(["pending", "error", "disabled"] as const)("keeps managed connection available when provisioning is %s", state => {
-    vi.mocked(useProvisioningConfig).mockReturnValue(mockQueryResult({ data: state === "disabled" ? { enabled: false } : undefined, isPending: state === "pending", isError: state === "error", error: state === "error" ? new Error("unavailable") : null }));
+    vi.mocked(useProvisioningConfig).mockReturnValue(state === "disabled" ? mockQueryResult<ProvisioningConfig>({ data: { enabled: false } }) : state === "pending" ? mockQueryResult<ProvisioningConfig>({ isPending: true }) : mockQueryResult<ProvisioningConfig>({ isError: true, error: new Error("unavailable") }));
     renderWithProviders(<AddSiteChoiceDialog />);
     fireEvent.click(screen.getByRole("button", { name: "Add site" }));
     expect(screen.queryByRole("button", { name: "Provision new site" })).not.toBeInTheDocument();
