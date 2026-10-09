@@ -164,6 +164,7 @@ test("Add site opens the live enrollment modal at the URL step", async ({
   // pairing-code modal with the live, site-first enrollment flow — step A
   // collects the URL.
   await page.getByRole("button", { name: "Add site" }).first().click();
+  await page.getByRole("button", { name: "Connect existing site" }).click();
   await expect(
     page.getByRole("heading", { name: "Add site", exact: true }),
   ).toBeVisible();
