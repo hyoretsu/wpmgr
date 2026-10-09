@@ -4,7 +4,11 @@ Provisioning is an explicit self-hosted opt-in. Set
 `WPMGR_PROVISIONING_ENABLED=true` and configure the host operator organization's
 UUID in `WPMGR_PROVISIONING_OPERATOR_TENANT_ID`. Only that organization's signed-in
 owners can create, inspect, retry, or retrieve credentials. Hosted installations
-cannot enable provisioning.
+cannot enable provisioning. This host setting enables a capability; it does not
+select how every site is added. Provisioning remains optional for each new site.
+One organization can manage existing WordPress sites alongside sites provisioned
+on this host, in the same dashboard. Existing sites are never automatically
+migrated into Docker or converted into provisioned sites.
 
 ## Host prerequisites
 
@@ -73,10 +77,25 @@ Set `WPMGR_PROVISIONING_WORKER_ENV_FILE` to the worker secret file and
 same operator settings. A request saves its runtime configuration; retry uses
 that saved configuration rather than adopting subsequent environment edits.
 
+## Adding a site
+
+Start with **Add site** and choose the path for that site:
+
+- **Connect existing WordPress** connects a site already running on its current
+  host through Fleet Agent. It does not create or move hosting resources.
+- **Create new WordPress** provisions a new installation on this Docker host.
+  This choice is available only when provisioning is enabled and the signed-in
+  user is an owner of the configured host-operator organization.
+
+Both paths add sites to the same dashboard. Provisioning progress and recovery
+controls apply only to sites created through the provisioning path; existing
+connections retain their normal connection flow.
+
 ## Operation and recovery
 
-Submit a bare domain, site title, administrator username, and administrator email
-through the dashboard provisioning form. Passwords are generated and stored
+For **Create new WordPress**, submit a bare domain, optional site title,
+administrator username, and administrator email through the provisioning form.
+The title defaults to the domain. Passwords are generated and stored
 encrypted. The request creates a durable job and site record. Status shows
 progress through database, volume, WordPress, installation, agent enrollment,
 and HTTPS verification. Completion requires installation, enrollment, and a
